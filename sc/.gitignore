@@ -1,0 +1,10 @@
+# Foundry artifacts
+/broadcast/
+/cache/
+/lib/
+/out/
+
+# Local environment
+.env
+.env.*
+!.env.example

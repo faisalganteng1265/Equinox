@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Frontend build output
+**/.next/
+**/out/
+
+# Foundry build output
+sc/broadcast/
+sc/cache/
+sc/lib/
+sc/out/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# OS/editor noise
+.DS_Store
+Thumbs.db

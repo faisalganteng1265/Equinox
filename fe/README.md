@@ -1,36 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Equinox Frontend
+
+Frontend Next.js untuk Equinox, dashboard AI-native RWA portfolio management di atas Mantle. Aplikasi ini menampilkan portfolio topology, agent reasoning stream, risk profile controls, modal wallet/deposit/shield, dan panel tweaks untuk demo visual.
+
+## Tech Stack
+
+- Next.js 16 dengan App Router
+- React 19
+- TypeScript
+- Tailwind CSS 4
+- ESLint 9 dengan konfigurasi Next.js
 
 ## Getting Started
 
-First, run the development server:
+Install dependencies dari folder `fe`:
+
+```bash
+npm install
+```
+
+Jalankan development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Buka `http://localhost:3000` di browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run dev
+npm run build
+npm run start
+npm run lint
+```
 
-## Learn More
+- `dev`: menjalankan Next.js development server.
+- `build`: membuat production build.
+- `start`: menjalankan production server setelah build.
+- `lint`: menjalankan ESLint untuk frontend.
 
-To learn more about Next.js, take a look at the following resources:
+## Project Structure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```text
+src/app/
+  globals.css       Global theme, layout primitives, component utility classes
+  layout.tsx        Root metadata, fonts, and HTML shell
+  page.tsx          Main Equinox dashboard app shell
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+src/components/
+  agents-page.tsx   Agent registry, strategy, and history views
+  charts.tsx        Donut, area, sparkline, and allocation charts
+  icons.tsx         Local icon renderer used by dashboard controls
+  modals.tsx        Wallet connect, deposit, and risk shield modals
+  tweaks-panel.tsx  Floating demo controls for theme/accent/profile
+  v2-hero.tsx       Top navigation and memo hero
+  v2-pieces.tsx     Portfolio cards, risk dial, ticker, and feed stream
+  v2-topology.tsx   Capital topology visualization
 
-## Deploy on Vercel
+src/lib/
+  data.ts           Mock assets, agents, venues, risk profiles, and feed data
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Current UX
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Portfolio page with NAV summary, latest rebalance memo, capital topology, position cards, agent reasoning feed, risk profile dial, and decision ticker.
+- Agent page for ERC-8004-style identity and agent metadata.
+- Strategy page for venue and risk allocation overview.
+- History page backed by the live feed entries.
+- Floating tweaks panel for dark/light theme, accent color, agent tone, and risk profile.
+
+## Validation
+
+Run these before opening a PR or pushing larger changes:
+
+```bash
+npm run lint
+npm run build
+```
+
+Both commands should pass before deployment.

@@ -1,0 +1,17 @@
+{
+  "name": "equinox",
+  "private": true,
+  "packageManager": "pnpm@11.1.1",
+  "scripts": {
+    "dev": "pnpm -r --parallel --filter @equinox/fe --filter @equinox/be run dev",
+    "dev:fe": "pnpm --filter @equinox/fe dev",
+    "dev:be": "pnpm --filter @equinox/be dev",
+    "build": "pnpm -r --filter @equinox/fe --filter @equinox/be run build",
+    "build:fe": "pnpm --filter @equinox/fe build",
+    "build:be": "pnpm --filter @equinox/be build",
+    "start": "pnpm -r --parallel --filter @equinox/fe --filter @equinox/be run start",
+    "start:fe": "pnpm --filter @equinox/fe start",
+    "start:be": "pnpm --filter @equinox/be start",
+    "lint": "pnpm -r --if-present --filter @equinox/fe --filter @equinox/be run lint"
+  }
+}

@@ -12,16 +12,22 @@ Frontend Next.js untuk Equinox, dashboard AI-native RWA portfolio management di 
 
 ## Getting Started
 
-Install dependencies dari folder `fe`:
+Install dependencies dari root workspace:
 
 ```bash
-npm install
+pnpm install
 ```
 
-Jalankan development server:
+Jalankan frontend dari root:
 
 ```bash
-npm run dev
+pnpm dev:fe
+```
+
+Atau dari package frontend langsung:
+
+```bash
+pnpm --filter @equinox/fe dev
 ```
 
 Buka `http://localhost:3000` di browser.
@@ -29,10 +35,10 @@ Buka `http://localhost:3000` di browser.
 ## Scripts
 
 ```bash
-npm run dev
-npm run build
-npm run start
-npm run lint
+pnpm --filter @equinox/fe dev
+pnpm --filter @equinox/fe build
+pnpm --filter @equinox/fe start
+pnpm --filter @equinox/fe lint
 ```
 
 - `dev`: menjalankan Next.js development server.
@@ -75,8 +81,8 @@ src/lib/
 Run these before opening a PR or pushing larger changes:
 
 ```bash
-npm run lint
-npm run build
+pnpm --filter @equinox/fe lint
+pnpm --filter @equinox/fe build
 ```
 
 Both commands should pass before deployment.

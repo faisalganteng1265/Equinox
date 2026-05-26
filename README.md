@@ -1,5 +1,58 @@
 # Product Design Specification: Equinox RWA
 
+## Monorepo Setup
+
+Repo ini sekarang memakai `pnpm workspace` untuk layer aplikasi JavaScript:
+
+- `fe` -> Next.js frontend
+- `be` -> Express backend
+- `sc` -> tetap terpisah, tidak masuk workspace `pnpm`, dan tetap dijalankan dengan tool Foundry
+
+### Quick Start
+
+Install dependency frontend dan backend dari root:
+
+```bash
+pnpm install
+```
+
+Jalankan frontend dan backend bersamaan dari root:
+
+```bash
+pnpm dev
+```
+
+Jalankan salah satu package saja:
+
+```bash
+pnpm dev:fe
+pnpm dev:be
+```
+
+Atau gunakan filter langsung:
+
+```bash
+pnpm --filter @equinox/fe dev
+pnpm --filter @equinox/be dev
+```
+
+Build dari root:
+
+```bash
+pnpm build
+pnpm lint
+```
+
+### Smart Contract Workspace
+
+Folder `sc` tidak dikelola oleh `pnpm workspace`. Untuk smart contract, tetap gunakan command Foundry dari folder `sc`:
+
+```bash
+cd sc
+forge build
+forge test
+```
+
 **Target Network:** Mantle Network (Testnet)
 
 ## 1. Identitas Produk

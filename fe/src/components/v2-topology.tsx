@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { Icon } from './icons';
-import type { Asset } from '@/lib/data';
+import type { Asset, Venue } from '@/lib/data';
 
 interface VenueNode {
   id: string;
@@ -17,8 +17,8 @@ interface VenueNode {
 }
 
 function kindColor(kind: string): string {
-  if (kind === 'RWA') return 'var(--warning)';
-  if (kind === 'CeFi') return 'var(--info)';
+  if (kind.includes('Idle')) return 'var(--warning)';
+  if (kind.includes('CeFi')) return 'var(--info)';
   return 'var(--accent)';
 }
 
@@ -29,15 +29,14 @@ function curvePath(x1: number, y1: number, x2: number, y2: number): string {
 
 export function CapitalTopology({
   assets,
-  pivotState,
-  onPivot,
+  venues = [],
+  onRefresh,
   profile,
   paused,
 }: {
   assets: Asset[];
-  venues?: unknown[];
-  pivotState: string;
-  onPivot: () => void;
+  venues?: Venue[];
+  onRefresh: () => void;
   profile: string;
   paused: boolean;
 }) {
@@ -48,21 +47,36 @@ export function CapitalTopology({
   const HUB = { x: 320, y: H / 2 };
 
   const venueNodes: VenueNode[] = useMemo(() => {
-    const list = [
-      { id: 'Aave', label: 'Aave V3', asset: 'mETH', apy: 4.31, kind: 'DeFi', x: 740, y: 60 },
-      { id: 'Ondo', label: 'Ondo USDY', asset: 'USDY', apy: 5.12, kind: 'RWA', x: 740, y: 130 },
-      { id: 'CIAN', label: 'CIAN Vault', asset: 'fBTC', apy: 2.86, kind: 'DeFi', x: 740, y: 200 },
-      { id: 'MI4', label: 'Mantle MI4', asset: 'MI4', apy: 6.74, kind: 'DeFi', x: 740, y: 270 },
-      { id: 'BybitF', label: 'Bybit Flex', asset: 'USDY', apy: 4.1, kind: 'CeFi', x: 1060, y: 100 },
-      { id: 'BybitX', label: 'Bybit Fixed', asset: 'mETH', apy: 4.82, kind: 'CeFi', x: 1060, y: 220 },
-    ];
-    return list.map(v => {
-      const a = assets.find(x => x.id === v.asset);
-      return { ...v, weight: a ? a.weight : 0, color: kindColor(v.kind) };
-    });
-  }, [assets]);
+    const source = venues.length > 0
+      ? venues
+      : assets.map((asset) => ({
+          name: asset.venue,
+          kind: asset.venueKind,
+          chain: 'Mantle Sepolia',
+          asset: asset.id,
+          apy: asset.apy,
+          tvl: '',
+          state: 'active' as const,
+        }));
 
-  const active = pivotState === 'bridging';
+    return source.map((venue, index) => {
+      const rowCount = Math.max(1, source.length);
+      const y = 58 + (index * (H - 116)) / Math.max(1, rowCount - 1);
+      const a = assets.find((asset) => asset.id === venue.asset || asset.sym === venue.asset);
+      const kind = venue.kind || 'Strategy';
+      return {
+        id: `${venue.name}-${index}`,
+        label: venue.name,
+        asset: a?.id || venue.asset,
+        apy: venue.apy,
+        kind,
+        x: 840,
+        y,
+        weight: a ? a.weight : 0,
+        color: kindColor(kind),
+      };
+    });
+  }, [assets, venues]);
 
   return (
     <div className="topology" style={{ height: 360 }}>
@@ -80,11 +94,8 @@ export function CapitalTopology({
           <span className="eyebrow dim">· live · {profile} bounds</span>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
-          <button className="btn btn-sm btn-outline" onClick={onPivot} disabled={pivotState === 'bridging'}>
-            {pivotState === 'idle' && <><Icon name="zap" size={12} /> Simulate CeFi pivot</>}
-            {pivotState === 'scanning' && 'Scanning rates…'}
-            {pivotState === 'bridging' && 'Routing via Bybit API…'}
-            {pivotState === 'settled' && <><Icon name="check" size={12} /> Settled · reset</>}
+          <button className="btn btn-sm btn-outline" onClick={onRefresh}>
+            <Icon name="swap" size={12} /> Refresh state
           </button>
         </div>
       </div>
@@ -107,8 +118,8 @@ export function CapitalTopology({
             style={{ animation: paused ? 'none' : 'dash-flow 1.4s linear infinite' }} />
         </g>
 
-        {/* Hub → DeFi venues */}
-        {venueNodes.filter(v => v.kind !== 'CeFi').map(v => {
+        {/* Hub → strategy venues */}
+        {venueNodes.map(v => {
           const strength = Math.max(0.2, v.weight * 2.5);
           const stroke = v.weight > 0 ? 'var(--accent)' : 'var(--rule)';
           return (
@@ -119,24 +130,6 @@ export function CapitalTopology({
                 <path d={curvePath(HUB.x + 32, HUB.y, v.x - 72, v.y)}
                   fill="none" stroke="var(--accent)" strokeWidth="1" strokeDasharray="3 6"
                   style={{ animation: paused ? 'none' : `dash-flow 1.8s linear infinite` }} />
-              )}
-            </g>
-          );
-        })}
-
-        {/* Bybit CeFi bridges */}
-        {venueNodes.filter(v => v.kind === 'CeFi').map(v => {
-          const sourceVenue = venueNodes.find(x => x.asset === v.asset && x.kind !== 'CeFi');
-          if (!sourceVenue) return null;
-          const isActive = active && v.id === 'BybitX';
-          return (
-            <g key={v.id} opacity={hoverNode && hoverNode !== v.id ? 0.35 : 0.75} style={{ transition: 'opacity 200ms' }}>
-              <path d={curvePath(sourceVenue.x + 72, sourceVenue.y, v.x - 72, v.y)}
-                fill="none" stroke="var(--info)" strokeWidth="1.1" strokeDasharray="2 5" opacity="0.45" />
-              {isActive && (
-                <path d={curvePath(sourceVenue.x + 72, sourceVenue.y, v.x - 72, v.y)}
-                  fill="none" stroke="var(--info)" strokeWidth="2" strokeDasharray="6 6"
-                  style={{ animation: 'dash-flow 0.6s linear infinite', filter: 'url(#glow)' }} />
               )}
             </g>
           );
@@ -167,7 +160,7 @@ export function CapitalTopology({
           <circle cx={HUB.x} cy={HUB.y} r="22" fill="none" stroke="var(--accent)" strokeWidth="0.5" opacity="0.5" />
           <circle cx={HUB.x} cy={HUB.y} r="3" fill="var(--accent)" />
           <text x={HUB.x} y={HUB.y - 40} textAnchor="middle" fontSize="9" fontFamily="var(--font-mono)" fill="var(--paper-2)" letterSpacing="0.08em">AGENT</text>
-          <text x={HUB.x} y={HUB.y + 50} textAnchor="middle" fontSize="10" fontFamily="var(--font-mono)" fill="var(--paper-3)">#9134</text>
+          <text x={HUB.x} y={HUB.y + 50} textAnchor="middle" fontSize="10" fontFamily="var(--font-mono)" fill="var(--paper-3)">LIVE</text>
         </g>
 
         {/* Venue nodes */}
@@ -207,10 +200,10 @@ export function CapitalTopology({
       }}>
         <div style={{ display: 'flex', gap: 18 }}>
           <Legend dot="var(--accent)" label="DeFi · Mantle" />
-          <Legend dot="var(--warning)" label="RWA · Ondo" />
-          <Legend dot="var(--info)" label="CeFi · Bybit" />
+          <Legend dot="var(--warning)" label="Idle strategy" />
+          <Legend dot="var(--info)" label="CeFi strategy" />
         </div>
-        <div className="dim">{paused ? 'paused' : 'scan every 6h · gas-aware'}</div>
+        <div className="dim">{paused ? 'paused' : 'live backend snapshot'}</div>
       </div>
     </div>
   );

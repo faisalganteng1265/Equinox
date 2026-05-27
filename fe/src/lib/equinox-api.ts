@@ -88,6 +88,30 @@ export const equinoxApi = {
       body: JSON.stringify(payload),
     });
   },
+  mintDemoAsset(payload: {
+    asset: string;
+    recipient: string;
+    amount?: string;
+    amountRaw?: string;
+  }) {
+    return apiRequest<{
+      assetKey: string;
+      assetAddress: string;
+      recipient: string;
+      amount: string;
+      amountFormatted: string;
+      receipt: {
+        transactionHash: string;
+        blockNumber: string;
+        gasUsed: string;
+        status: string;
+        explorerUrl: string;
+      };
+    }>('demo/mint', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
   estimateMantleGas(payload: {
     txs: Array<{ to: string; data?: string; value?: string }>;
   }) {

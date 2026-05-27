@@ -1,12 +1,12 @@
 'use client';
 
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useState, useTransition } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAccount } from 'wagmi';
 
 import { AgentsPage, HistoryPage, StrategyPage } from '@/components/agents-page';
 import { Icon } from '@/components/icons';
-import { RiskShieldModal, VaultActionModal } from '@/components/modals';
+import { FaucetModal, RiskShieldModal, VaultActionModal } from '@/components/modals';
 import { BottleCard, DecisionTape, RiskDial, AgentMemoStream } from '@/components/v2-pieces';
 import { V2TopBar, MemoHero } from '@/components/v2-hero';
 import { CapitalTopology } from '@/components/v2-topology';
@@ -20,14 +20,14 @@ import {
   buildPreviewFeed,
   buildPrimaryAgent,
   buildProfileTargets,
+  buildRiskProfilesFromPortfolio,
   buildUiAssets,
   buildUiVenues,
 } from '@/lib/equinox-ui';
-import { FEED_LIBRARY, RISK_PROFILES, STATIC_AGENTS, buildSparkSeries, nowStamp, seedFeedV2, type FeedEntry, type RiskProfileName } from '@/lib/data';
+import { RISK_PROFILES, buildSparkSeries, nowStamp, type FeedEntry, type RiskProfileName } from '@/lib/data';
 
-type ModalKind = 'deposit' | 'withdraw' | 'shield' | null;
+type ModalKind = 'deposit' | 'withdraw' | 'faucet' | 'shield' | null;
 type PageKind = 'portfolio' | 'agents' | 'strategy' | 'history';
-type PivotState = 'idle' | 'scanning' | 'bridging' | 'settled';
 
 const TWEAK_DEFAULTS = {
   theme: 'dark' as string,
@@ -49,13 +49,10 @@ export default function AppV2() {
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
   const [modal, setModal] = useState<ModalKind>(null);
   const [paused, setPaused] = useState(false);
-  const [pivotState, setPivotState] = useState<PivotState>('idle');
   const [actionBusy, setActionBusy] = useState<'preview' | 'execute' | 'reject' | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [shieldAttempt, setShieldAttempt] = useState<{ asset: string; weight: number }>({ asset: 'fBTC', weight: 0.38 });
-  const [ambientFeed, setAmbientFeed] = useState<FeedEntry[]>(() => seedFeedV2());
   const [localFeed, setLocalFeed] = useState<FeedEntry[]>([]);
-  const feedKeyRef = useRef(200);
 
   const contractsQuery = useQuery({
     queryKey: ['equinox-contracts'],
@@ -85,24 +82,6 @@ export default function AppV2() {
   }, [accent]);
 
   useEffect(() => {
-    if (paused) {
-      return;
-    }
-
-    const timer = setInterval(() => {
-      setAmbientFeed((current) => {
-        const next = { ...FEED_LIBRARY[Math.floor(Math.random() * FEED_LIBRARY.length)] };
-        next._key = ++feedKeyRef.current;
-        next.timestamp = nowStamp();
-        next.ago = 'just now';
-        return [next, ...current].slice(0, 12);
-      });
-    }, 7_200);
-
-    return () => clearInterval(timer);
-  }, [paused]);
-
-  useEffect(() => {
     const remoteProfile = portfolioQuery.data?.vault.currentRiskProfile;
     if (remoteProfile && remoteProfile !== profile && localFeed.length === 0) {
       setTweak({ profile: remoteProfile });
@@ -117,6 +96,10 @@ export default function AppV2() {
     () => (portfolioQuery.data ? buildUiVenues(portfolioQuery.data) : []),
     [portfolioQuery.data],
   );
+  const liveProfiles = useMemo(
+    () => (portfolioQuery.data ? buildRiskProfilesFromPortfolio(portfolioQuery.data) : RISK_PROFILES),
+    [portfolioQuery.data],
+  );
   const primaryAgent = useMemo(() => {
     if (!portfolioQuery.data || !agentQuery.data) {
       return null;
@@ -126,10 +109,10 @@ export default function AppV2() {
   }, [agentQuery.data, portfolioQuery.data, profile]);
   const agents = useMemo(() => {
     if (!primaryAgent) {
-      return STATIC_AGENTS;
+      return [];
     }
 
-    return [primaryAgent, ...STATIC_AGENTS];
+    return [primaryAgent];
   }, [primaryAgent]);
   const selectedAgent = useMemo(
     () => agents.find((agent) => agent.id === selectedAgentId) || primaryAgent || agents[0] || null,
@@ -137,7 +120,7 @@ export default function AppV2() {
   );
 
   const onChainFeed = useMemo(() => (agentQuery.data ? buildDecisionFeed(agentQuery.data) : []), [agentQuery.data]);
-  const feed = useMemo(() => [...localFeed, ...onChainFeed, ...ambientFeed].slice(0, 18), [ambientFeed, localFeed, onChainFeed]);
+  const feed = useMemo(() => [...localFeed, ...onChainFeed].slice(0, 18), [localFeed, onChainFeed]);
   const deferredFeed = useDeferredValue(feed);
   const weightedApy = useMemo(
     () => assets.reduce((sum, asset) => sum + asset.weight * asset.apy, 0),
@@ -149,7 +132,7 @@ export default function AppV2() {
     const latest = deferredFeed.find((entry) => entry.kind === 'rebalance') || deferredFeed[0];
 
     return {
-      no: String(agentQuery.data?.decisionCount || 1),
+      no: String(agentQuery.data?.decisionCount || 0),
       date: new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }),
       kind: latest?.kind === 'guard' ? 'Guardrail' : 'Rebalance',
       delta: latest?.delta || '0.0%',
@@ -210,6 +193,7 @@ export default function AppV2() {
         venue: 'Risk Guardrail',
         delta: 'blocked',
         tx: result.receipt.transactionHash,
+        txUrl: result.receipt.explorerUrl,
       });
       setModal('shield');
       await refreshLiveData();
@@ -230,7 +214,7 @@ export default function AppV2() {
 
     try {
       const preview = await equinoxApi.previewRebalance({
-        targets: buildProfileTargets(contractsQuery.data, RISK_PROFILES[profile].target),
+        targets: buildProfileTargets(contractsQuery.data, liveProfiles[profile].target),
       });
 
       addLocalFeed(buildPreviewFeed(preview, profile));
@@ -246,7 +230,7 @@ export default function AppV2() {
     } finally {
       setActionBusy(null);
     }
-  }, [addLocalFeed, contractsQuery.data, profile]);
+  }, [addLocalFeed, contractsQuery.data, liveProfiles, profile]);
 
   const executeCurrentPlan = useCallback(async () => {
     if (!contractsQuery.data) {
@@ -258,7 +242,7 @@ export default function AppV2() {
 
     try {
       const result = await equinoxApi.executeRebalance({
-        targets: buildProfileTargets(contractsQuery.data, RISK_PROFILES[profile].target),
+        targets: buildProfileTargets(contractsQuery.data, liveProfiles[profile].target),
         reasoning: {
           source: 'frontend',
           mode: 'execute-profile',
@@ -275,6 +259,7 @@ export default function AppV2() {
         venue: 'Backend agent',
         delta: `${result.preview.totalWeightBps / 100}% target`,
         tx: result.receipt.transactionHash,
+        txUrl: result.receipt.explorerUrl,
       });
       await refreshLiveData();
     } catch (error) {
@@ -282,28 +267,7 @@ export default function AppV2() {
     } finally {
       setActionBusy(null);
     }
-  }, [addLocalFeed, address, contractsQuery.data, profile, refreshLiveData]);
-
-  const triggerPivot = useCallback(() => {
-    if (pivotState !== 'idle') {
-      setPivotState('idle');
-      return;
-    }
-
-    setPivotState('scanning');
-    setTimeout(() => {
-      setPivotState('bridging');
-      addLocalFeed({
-        kind: 'bridge',
-        title: 'CeFi route simulation settled',
-        body: 'The frontend simulated a venue pivot to show how routing can be visualized before protocol-specific adapters go live.',
-        venue: 'Bybit route simulator',
-        delta: 'route simulated',
-        tx: null,
-      });
-      setTimeout(() => setPivotState('settled'), 2_800);
-    }, 900);
-  }, [addLocalFeed, pivotState]);
+  }, [addLocalFeed, address, contractsQuery.data, liveProfiles, profile, refreshLiveData]);
 
   if (contractsQuery.isLoading || portfolioQuery.isLoading || agentQuery.isLoading || !primaryAgent) {
     return (
@@ -322,7 +286,19 @@ export default function AppV2() {
     <>
       <div className="shell">
         <V2TopBar
-          walletSlot={<WalletButton />}
+          walletSlot={(
+            <>
+              <button
+                className="btn btn-outline"
+                onClick={() => setModal('faucet')}
+                type="button"
+                disabled={!portfolioQuery.data}
+              >
+                <Icon name="plus" size={13} /> Faucet
+              </button>
+              <WalletButton />
+            </>
+          )}
           page={page}
           setPage={(nextPage) => startPageTransition(() => setPage(nextPage as PageKind))}
         />
@@ -341,8 +317,8 @@ export default function AppV2() {
             <section className="section">
               <CapitalTopology
                 assets={assets}
-                pivotState={pivotState}
-                onPivot={triggerPivot}
+                venues={venues}
+                onRefresh={() => void refreshLiveData()}
                 profile={profile}
                 paused={paused}
               />
@@ -408,7 +384,7 @@ export default function AppV2() {
                 <RiskDial
                   profile={profile}
                   setProfile={(nextProfile) => setTweak({ profile: nextProfile as RiskProfileName })}
-                  profiles={RISK_PROFILES}
+                  profiles={liveProfiles}
                   assets={assets}
                 />
               </div>
@@ -428,7 +404,7 @@ export default function AppV2() {
 
         {page === 'strategy' ? (
           <section style={{ paddingTop: 36 }}>
-            <StrategyPage venues={venues} profile={profile} profiles={RISK_PROFILES} />
+            <StrategyPage venues={venues} profile={profile} profiles={liveProfiles} />
           </section>
         ) : null}
 
@@ -452,7 +428,7 @@ export default function AppV2() {
           portfolio={portfolioQuery.data}
           profile={profile}
           setProfile={(nextProfile) => setTweak({ profile: nextProfile })}
-          profiles={RISK_PROFILES}
+          profiles={liveProfiles}
           walletAddress={address}
           chainId={chainId}
         />
@@ -467,9 +443,19 @@ export default function AppV2() {
           portfolio={portfolioQuery.data}
           profile={profile}
           setProfile={(nextProfile) => setTweak({ profile: nextProfile })}
-          profiles={RISK_PROFILES}
+          profiles={liveProfiles}
           walletAddress={address}
           chainId={chainId}
+        />
+      ) : null}
+
+      {modal === 'faucet' && portfolioQuery.data ? (
+        <FaucetModal
+          onClose={() => setModal(null)}
+          onComplete={() => void refreshLiveData()}
+          onDeposit={() => setModal('deposit')}
+          portfolio={portfolioQuery.data}
+          walletAddress={address}
         />
       ) : null}
 
@@ -478,7 +464,7 @@ export default function AppV2() {
           onClose={() => setModal(null)}
           attempted={shieldAttempt}
           profile={profile}
-          profiles={RISK_PROFILES}
+          profiles={liveProfiles}
         />
       ) : null}
 

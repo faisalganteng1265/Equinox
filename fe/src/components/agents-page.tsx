@@ -1,7 +1,6 @@
 'use client';
 
 import { Icon } from './icons';
-import { AreaChart } from './charts';
 import { SigilMark } from './v2-hero';
 import type { Agent, Venue, RiskProfiles, FeedEntry } from '@/lib/data';
 
@@ -22,10 +21,6 @@ export function AgentsPage({ agents, onSelect, selected }: {
             <p style={{ fontSize: 13, color: 'var(--text-mute)', margin: '6px 0 0' }}>
               All agents are minted as ERC-8004 identity NFTs on Mantle. Reputation, decisions, and yield history are recorded on-chain.
             </p>
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-outline"><Icon name="search" size={14} /> Search</button>
-            <button className="btn btn-outline">Verified only</button>
           </div>
         </div>
 
@@ -89,19 +84,8 @@ export function AgentsPage({ agents, onSelect, selected }: {
 
 export function AgentDetailCard({ agent }: { agent: Agent | null }) {
   if (!agent) return null;
-
-  const series = (() => {
-    let v = agent.portfolio / 1.06;
-    let s = agent.id;
-    const out: { t: number; v: number }[] = [];
-    for (let i = 0; i < 90; i++) {
-      s = (s * 9301 + 49297) % 233280;
-      const r = s / 233280 - 0.46;
-      v = v * (1 + r * 0.015 + agent.apy30 / 100 / 365);
-      out.push({ t: i, v: Math.round(v) });
-    }
-    return out;
-  })();
+  const totalOutcomes = agent.wins + agent.losses;
+  const winRate = totalOutcomes > 0 ? Math.round((agent.wins / totalOutcomes) * 100) : 0;
 
   return (
     <div className="card" style={{ overflow: 'hidden', position: 'sticky', top: 80 }}>
@@ -131,8 +115,10 @@ export function AgentDetailCard({ agent }: { agent: Agent | null }) {
       </div>
 
       <div style={{ padding: 20 }}>
-        <div style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>90d performance</div>
-        <AreaChart series={series} height={140} color="var(--accent)" showAxis={false} />
+        <div style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Performance record</div>
+        <div style={{ padding: 16, border: '1px solid var(--border-soft)', borderRadius: 8, background: 'var(--surface-2)', color: 'var(--text-mute)', fontSize: 12, lineHeight: 1.6 }}>
+          Performance is read from the on-chain agent registry. The current contract records cumulative performance bps and decision outcomes.
+        </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginTop: 16 }}>
           <Mini label="Score" value={String(agent.score)} sub="/100" accent />
@@ -140,7 +126,7 @@ export function AgentDetailCard({ agent }: { agent: Agent | null }) {
           <Mini label="APY 90d" value={`+${agent.apy90.toFixed(2)}%`} />
           <Mini label="Sharpe" value={agent.sharpe.toFixed(2)} />
           <Mini label="Max DD" value={`${agent.maxDD.toFixed(1)}%`} />
-          <Mini label="Win rate" value={`${Math.round(agent.wins / (agent.wins + agent.losses) * 100)}%`} />
+          <Mini label="Win rate" value={`${winRate}%`} />
         </div>
 
         <div style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '20px 0 10px' }}>On-chain record</div>
@@ -262,6 +248,11 @@ export function HistoryPage({ entries }: { entries: FeedEntry[] }) {
           <div>Tx</div>
         </div>
         <div className="divider" />
+        {entries.length === 0 ? (
+          <div style={{ padding: 24, color: 'var(--text-mute)', fontSize: 13, lineHeight: 1.6 }}>
+            No agent decisions have been recorded yet. Run a preview, execute a plan, or record a blocked decision from the portfolio page.
+          </div>
+        ) : null}
         {entries.map((e, i) => {
           const color = e.kind === 'guard' ? 'var(--negative)' : e.kind === 'bridge' ? 'var(--info)' : 'var(--accent)';
           return (
@@ -281,7 +272,13 @@ export function HistoryPage({ entries }: { entries: FeedEntry[] }) {
               <div style={{ color: 'var(--text-mute)', lineHeight: 1.5, paddingRight: 12 }}>{e.body}</div>
               <div style={{ color: 'var(--text-mute)' }}>{e.venue}</div>
               <div className="mono" style={{ color: e.kind === 'guard' ? 'var(--negative)' : 'var(--text)' }}>{e.delta}</div>
-              <div className="mono dim">{e.tx || '—'}</div>
+              <div className="mono dim">
+                {e.txUrl && e.tx ? (
+                  <a href={e.txUrl} target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    {e.tx.slice(0, 10)}... <Icon name="external" size={10} />
+                  </a>
+                ) : e.tx ? e.tx.slice(0, 10) : '—'}
+              </div>
             </div>
           );
         })}

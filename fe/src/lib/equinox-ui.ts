@@ -1,6 +1,6 @@
 import type { Address } from 'viem';
 
-import type { Agent, Asset, FeedEntry, RiskProfileName, Venue } from './data';
+import { RISK_PROFILES, type Agent, type Asset, type FeedEntry, type RiskProfileName, type RiskProfiles, type Venue } from './data';
 import type { AgentSnapshotResponse, ContractsResponse, PortfolioResponse, PreviewResponse } from './equinox-types';
 
 const assetMeta: Record<string, { kind: string; color: string; fallbackPrice: number }> = {
@@ -70,25 +70,33 @@ export function buildUiAssets(portfolio: PortfolioResponse): Asset[] {
 }
 
 export function buildUiVenues(portfolio: PortfolioResponse): Venue[] {
-  const activeVenues = portfolio.assets.map((asset) => {
-    const primaryStrategy = asset.strategies[0];
-
-    return {
-      name: primaryStrategy?.label || `${asset.symbol} Strategy`,
-      kind: primaryStrategy?.venueLabel || 'DeFi',
-      chain: 'Mantle',
+  return portfolio.assets.flatMap((asset) =>
+    asset.strategies.map((strategy) => ({
+      name: strategy.label,
+      kind: strategy.venueLabel || strategy.venueType,
+      chain: 'Mantle Sepolia',
       asset: asset.symbol,
-      apy: (primaryStrategy?.latestSnapshot.apyBps || 0) / 100,
+      apy: strategy.latestSnapshot.apyBps / 100,
       tvl: `$${Math.round(numberOrFallback(asset.assetValueFormatted, 0)).toLocaleString()}`,
-      state: 'active' as const,
-    };
-  });
+      state: strategy.approved ? 'active' as const : 'available' as const,
+    })),
+  );
+}
 
-  return [
-    ...activeVenues,
-    { name: 'Bybit Earn - Flexible', kind: 'CeFi', chain: 'Bybit', asset: 'USDY', apy: 4.1, tvl: '-', state: 'available' },
-    { name: 'Bybit Earn - Fixed 14d', kind: 'CeFi', chain: 'Bybit', asset: 'mETH', apy: 4.82, tvl: '-', state: 'available' },
-  ];
+export function buildRiskProfilesFromPortfolio(portfolio: PortfolioResponse): RiskProfiles {
+  const next: RiskProfiles = {
+    Conservative: { ...RISK_PROFILES.Conservative, max: {}, target: { ...RISK_PROFILES.Conservative.target } },
+    Balanced: { ...RISK_PROFILES.Balanced, max: {}, target: { ...RISK_PROFILES.Balanced.target } },
+    Aggressive: { ...RISK_PROFILES.Aggressive, max: {}, target: { ...RISK_PROFILES.Aggressive.target } },
+  };
+
+  for (const asset of portfolio.assets) {
+    next.Conservative.max[asset.key] = asset.policy.maxAllocationBps.conservative / 10_000;
+    next.Balanced.max[asset.key] = asset.policy.maxAllocationBps.balanced / 10_000;
+    next.Aggressive.max[asset.key] = asset.policy.maxAllocationBps.aggressive / 10_000;
+  }
+
+  return next;
 }
 
 export function buildPrimaryAgent(
@@ -106,8 +114,8 @@ export function buildPrimaryAgent(
     badge: 'Verified',
     apy30: weightedApy,
     apy90: weightedApy * 0.96,
-    sharpe: Math.max(1.1, weightedApy / 2.3),
-    maxDD: profile === 'Conservative' ? 1.9 : profile === 'Balanced' ? 4.2 : 7.1,
+    sharpe: weightedApy > 0 ? weightedApy / Math.max(1, agentSnapshot.stats.blockedDecisions + 1) : 0,
+    maxDD: agentSnapshot.stats.blockedDecisions,
     wins: agentSnapshot.stats.successfulDecisions,
     losses: agentSnapshot.stats.blockedDecisions,
     decisions: agentSnapshot.stats.totalDecisions,

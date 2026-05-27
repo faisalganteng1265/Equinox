@@ -97,7 +97,7 @@ src/components/
 src/lib/
   abis.ts           Minimal ABI surface for user wallet actions
   chains.ts         Mantle Sepolia chain config
-  data.ts           UI types, risk profiles, static feed, and fallback agents
+  data.ts           UI types and risk profile presets
   equinox-api.ts    Browser client for FE proxy routes
   equinox-types.ts  Backend response contracts for FE
   equinox-ui.ts     Mapping live backend payloads into dashboard UI shapes
@@ -107,9 +107,9 @@ src/lib/
 ## Current UX
 
 - Portfolio page with live NAV, live asset exposures, Mantle wallet actions, agent controls, and decision ticker.
-- Agent page for ERC-8004-style identity and agent metadata.
-- Strategy page for active mock adapters plus CeFi simulation rows.
-- History page backed by live decision data plus local demo events.
+- Agent page for ERC-8004-style identity and live agent metadata.
+- Strategy page for adapters returned by the backend.
+- History page backed by live decision data plus local write actions.
 - Floating tweaks panel for dark/light theme, accent color, agent tone, and risk profile.
 
 ## Validation

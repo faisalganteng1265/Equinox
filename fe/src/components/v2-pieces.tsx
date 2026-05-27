@@ -240,7 +240,21 @@ export function RiskDial({
 }
 
 export function DecisionTape({ entries }: { entries: FeedEntry[] }) {
-  const items = useMemo(() => [...entries, ...entries].map((e, i) => ({ ...e, _idx: i })), [entries]);
+  const items = useMemo(() => {
+    const tapeEntries = entries.length > 0
+      ? entries
+      : [{
+          kind: 'scan' as const,
+          title: 'Waiting for live agent decisions',
+          body: 'No on-chain decision has been recorded yet.',
+          venue: 'Mantle Sepolia',
+          delta: 'idle',
+          tx: null,
+          timestamp: '--:--:--',
+        }];
+
+    return [...tapeEntries, ...tapeEntries].map((e, i) => ({ ...e, _idx: i }));
+  }, [entries]);
   return (
     <div className="tape">
       <div className="tape-track">
@@ -270,7 +284,7 @@ function TapeItem({ entry }: { entry: FeedEntry }) {
         color, fontSize: 10, letterSpacing: '0.08em',
       }}>{label}</span>
       <span style={{ color: 'var(--paper)' }}>{entry.title}</span>
-      {entry.tx && <span className="dim">· tx {entry.tx}</span>}
+      {entry.tx && <span className="dim">· tx {entry.tx.slice(0, 10)}...</span>}
       <span className="dim">·</span>
     </span>
   );
@@ -299,6 +313,16 @@ export function AgentMemoStream({
   limit?: number;
 }) {
   const shown = entries.slice(0, limit);
+  if (shown.length === 0) {
+    return (
+      <div style={{ padding: '22px 0', borderTop: '1px solid var(--rule)', borderBottom: '1px solid var(--rule)' }}>
+        <div className="eyebrow">No decisions yet</div>
+        <p style={{ margin: '8px 0 0', color: 'var(--paper-3)', fontSize: 13, lineHeight: 1.6 }}>
+          Preview, execute, or record a blocked rebalance to populate the agent feed from live backend and on-chain state.
+        </p>
+      </div>
+    );
+  }
   if (personality === 'terminal') {
     return (
       <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--paper-2)', lineHeight: 1.7 }}>
@@ -343,9 +367,13 @@ export function AgentMemoStream({
               }}>{e.delta}</span>
             )}
             {e.tx && (
-              <a href="#" className="mono dim" style={{ textDecoration: 'none' }}>
-                tx {e.tx} <Icon name="external" size={10} />
-              </a>
+              e.txUrl ? (
+                <a href={e.txUrl} target="_blank" rel="noreferrer" className="mono dim" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  tx {e.tx.slice(0, 10)}... <Icon name="external" size={10} />
+                </a>
+              ) : (
+                <span className="mono dim">ref {e.tx.slice(0, 10)}...</span>
+              )
             )}
           </div>
         </article>

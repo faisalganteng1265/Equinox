@@ -22,6 +22,7 @@ interface GasEstimate {
 interface TxStatus {
   label: string;
   hash?: string;
+  explorerUrl?: string;
   blockNumber?: string;
   status: 'pending' | 'confirmed' | 'failed';
 }
@@ -127,6 +128,10 @@ function StatusNotice({ tone, children }: { tone: 'info' | 'warn' | 'error' | 'o
       {children}
     </div>
   );
+}
+
+function txExplorerUrl(baseUrl: string, hash: string) {
+  return `${baseUrl.replace(/\/$/, '')}/tx/${hash}`;
 }
 
 export function VaultActionModal({
@@ -328,6 +333,13 @@ export function VaultActionModal({
             : tx,
         ),
       );
+      setTxStatuses((current) =>
+        current.map((tx) =>
+          tx.label === label && tx.hash === hash
+            ? { ...tx, explorerUrl: txExplorerUrl(contracts.chain.explorerUrl, hash) }
+            : tx,
+        ),
+      );
     } catch (writeError) {
       setTxStatuses((current) =>
         current.map((tx) => (tx.label === label && tx.status === 'pending' ? { ...tx, status: 'failed' } : tx)),
@@ -426,7 +438,7 @@ export function VaultActionModal({
         <>
           <ModalHeader
             title={mode === 'deposit' ? 'Fund the vault' : 'Withdraw from vault'}
-            sub={mode === 'deposit' ? 'Approve and deposit mock assets from your owner wallet.' : 'Pull a mock asset back from the vault to your wallet.'}
+            sub={mode === 'deposit' ? 'Approve and deposit supported assets from your owner wallet.' : 'Pull a supported asset back from the vault to your wallet.'}
             onClose={onClose}
           />
           <div style={{ padding: '0 22px 22px' }}>
@@ -593,7 +605,14 @@ export function VaultActionModal({
                     </span>
                     <span style={{ color: tx.status === 'failed' ? 'var(--negative)' : 'var(--text)' }}>
                       {tx.label}
-                      {tx.hash ? ` · ${tx.hash.slice(0, 10)}…` : ''}
+                      {tx.explorerUrl && tx.hash ? (
+                        <>
+                          {' · '}
+                          <a href={tx.explorerUrl} target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>
+                            {tx.hash.slice(0, 10)}... <Icon name="external" size={10} />
+                          </a>
+                        </>
+                      ) : tx.hash ? ` · ${tx.hash.slice(0, 10)}...` : ''}
                       {tx.blockNumber ? ` · block ${tx.blockNumber}` : tx.status === 'pending' ? ' · pending…' : ''}
                     </span>
                   </div>
@@ -624,13 +643,174 @@ export function VaultActionModal({
   );
 }
 
+export function FaucetModal({
+  onClose,
+  onComplete,
+  onDeposit,
+  portfolio,
+  walletAddress,
+}: {
+  onClose: () => void;
+  onComplete: () => void;
+  onDeposit: () => void;
+  portfolio: PortfolioResponse;
+  walletAddress?: Address;
+}) {
+  const [assetKey, setAssetKey] = useState(portfolio.assets[0]?.key || 'USDY');
+  const [amount, setAmount] = useState('1000');
+  const [minting, setMinting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [mintStatus, setMintStatus] = useState<{ label: string; explorerUrl: string } | null>(null);
+
+  const selectedAsset = portfolio.assets.find((asset) => asset.key === assetKey) || portfolio.assets[0];
+  const vaultOwner = portfolio.vault.owner as Address;
+  const isOwner = walletAddress?.toLowerCase() === vaultOwner.toLowerCase();
+  const ownerLabel = walletLabel(vaultOwner);
+
+  async function copyOwnerAddress() {
+    await navigator.clipboard.writeText(vaultOwner);
+  }
+
+  async function mintSelectedAsset() {
+    if (!selectedAsset || !walletAddress) {
+      setError('Connect your owner wallet before minting test assets.');
+      return;
+    }
+
+    if (!isOwner) {
+      setError(`Only the vault owner ${walletLabel(vaultOwner)} should receive demo assets for this vault.`);
+      return;
+    }
+
+    if (!amount || Number(amount) <= 0) {
+      setError('Enter a valid non-zero amount.');
+      return;
+    }
+
+    setError(null);
+    setMintStatus(null);
+    setMinting(true);
+
+    try {
+      const result = await equinoxApi.mintDemoAsset({
+        asset: selectedAsset.key,
+        recipient: walletAddress,
+        amount,
+      });
+
+      setMintStatus({
+        label: `Minted ${Number(result.amountFormatted).toLocaleString(undefined, { maximumFractionDigits: selectedAsset.symbol === 'fBTC' ? 6 : 2 })} ${selectedAsset.symbol}`,
+        explorerUrl: result.receipt.explorerUrl,
+      });
+      onComplete();
+    } catch (mintError) {
+      setError(mintError instanceof Error ? mintError.message : 'Demo mint failed.');
+    } finally {
+      setMinting(false);
+    }
+  }
+
+  return (
+    <Modal onClose={onClose} width={480}>
+      <ModalHeader
+        title="Faucet"
+        sub="Mint supported demo assets to the vault owner wallet for Mantle Sepolia testing."
+        onClose={onClose}
+      />
+      <div style={{ padding: '0 22px 22px' }}>
+        {!isOwner ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <StatusNotice tone="warn">
+              Switch to the vault owner wallet before using the faucet. The vault only accepts deposits from its owner.
+            </StatusNotice>
+            <div style={{ padding: 14, border: '1px solid var(--border-soft)', borderRadius: 10, background: 'var(--surface-2)' }}>
+              <div style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                Required wallet
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                <span className="mono" style={{ fontSize: 13 }}>{ownerLabel}</span>
+                <button className="btn btn-sm btn-outline" onClick={() => void copyOwnerAddress()} type="button">
+                  <Icon name="copy" size={12} /> Copy
+                </button>
+              </div>
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-mute)', lineHeight: 1.6 }}>
+              Connected wallet: <span className="mono">{walletLabel(walletAddress)}</span>
+            </div>
+          </div>
+        ) : (
+          <>
+            <StatusNotice tone="ok">
+              Owner wallet connected. Mint demo assets here, then deposit them into the vault.
+            </StatusNotice>
+
+            <div style={{ height: 18 }} />
+            <label style={{ fontSize: 12, color: 'var(--text-mute)', display: 'block', marginBottom: 8 }}>Asset</label>
+            <select value={assetKey} onChange={(event) => setAssetKey(event.target.value)} style={{ width: '100%', background: 'var(--surface-2)' }}>
+              {portfolio.assets.map((asset) => (
+                <option key={asset.key} value={asset.key}>
+                  {asset.symbol} · {asset.displayName}
+                </option>
+              ))}
+            </select>
+
+            <div style={{ height: 18 }} />
+            <label style={{ fontSize: 12, color: 'var(--text-mute)', display: 'block', marginBottom: 8 }}>Amount</label>
+            <div style={{ display: 'flex', alignItems: 'center', padding: '12px 14px', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--surface-2)' }}>
+              <input
+                value={amount}
+                onChange={(event) => setAmount(event.target.value.replace(/[^\d.]/g, ''))}
+                style={{ border: 0, padding: 0, flex: 1, fontSize: 24, fontFamily: 'var(--font-mono)', background: 'transparent' }}
+              />
+              <span className="mono" style={{ fontWeight: 500 }}>{selectedAsset?.symbol}</span>
+            </div>
+          </>
+        )}
+
+        {error ? (
+          <div style={{ marginTop: 12 }}>
+            <StatusNotice tone="error">{error}</StatusNotice>
+          </div>
+        ) : null}
+        {mintStatus ? (
+          <div style={{ marginTop: 12 }}>
+            <StatusNotice tone="ok">
+              {mintStatus.label}{' '}
+              <a href={mintStatus.explorerUrl} target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>
+                View tx
+              </a>
+            </StatusNotice>
+          </div>
+        ) : null}
+      </div>
+      <div style={{ padding: '14px 22px', borderTop: '1px solid var(--border-soft)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Recipient {ownerLabel}</span>
+        {mintStatus ? (
+          <button className="btn btn-primary" onClick={onDeposit} type="button">
+            <Icon name="arrow-right" size={13} /> Deposit
+          </button>
+        ) : (
+          <button
+            className="btn btn-primary"
+            onClick={() => void mintSelectedAsset()}
+            type="button"
+            disabled={minting || !isOwner || !amount || Number(amount) <= 0}
+          >
+            <Icon name="plus" size={13} /> {minting ? 'Minting…' : 'Mint'}
+          </button>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 export function RiskShieldModal({ onClose, attempted, profile, profiles }: {
   onClose: () => void;
   attempted: { asset: string; weight: number };
   profile: string;
   profiles: RiskProfiles;
 }) {
-  const cap = profiles[profile as keyof RiskProfiles].max[attempted.asset];
+  const cap = profiles[profile as keyof RiskProfiles]?.max[attempted.asset] ?? 0;
 
   return (
     <Modal onClose={onClose} width={520}>

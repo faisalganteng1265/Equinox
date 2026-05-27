@@ -40,6 +40,54 @@ function softOf(hex: string) {
   return `color-mix(in srgb, ${hex} 18%, transparent)`;
 }
 
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
+function FullscreenStatus({
+  tone = 'loading',
+  title,
+  body,
+  onRetry,
+}: {
+  tone?: 'loading' | 'error';
+  title: string;
+  body: string;
+  onRetry?: () => void;
+}) {
+  return (
+    <div className="shell" style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
+      <div style={{ textAlign: 'center', maxWidth: 480 }}>
+        <div className="display italic" style={{ fontSize: 36 }}>Equinox RWA</div>
+        <div className="eyebrow" style={{ marginTop: 12, color: tone === 'error' ? 'var(--negative)' : 'var(--paper-3)' }}>
+          {title}
+        </div>
+        <p style={{ margin: '12px 0 0', color: 'var(--paper-2)', fontSize: 13, lineHeight: 1.6 }}>{body}</p>
+        {onRetry ? (
+          <button className="btn btn-primary" onClick={onRetry} type="button" style={{ marginTop: 18 }}>
+            <Icon name="swap" size={13} /> Retry
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function InlineStatus({
+  tone,
+  children,
+}: {
+  tone: 'info' | 'error' | 'warn';
+  children: React.ReactNode;
+}) {
+  const color = tone === 'error' ? 'var(--negative)' : tone === 'warn' ? 'var(--warning)' : 'var(--info)';
+  return (
+    <div style={{ marginBottom: 16, padding: '10px 12px', borderRadius: 10, border: `1px solid ${color}`, color, background: `color-mix(in srgb, ${color} 10%, transparent)`, fontSize: 12, lineHeight: 1.6 }}>
+      {children}
+    </div>
+  );
+}
+
 export default function AppV2() {
   const [tweak, setTweak] = useTweaks(TWEAK_DEFAULTS);
   const { theme, accent, personality, profile } = tweak;
@@ -51,6 +99,8 @@ export default function AppV2() {
   const [paused, setPaused] = useState(false);
   const [actionBusy, setActionBusy] = useState<'preview' | 'execute' | 'reject' | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [shieldAttempt, setShieldAttempt] = useState<{ asset: string; weight: number }>({ asset: 'fBTC', weight: 0.38 });
   const [localFeed, setLocalFeed] = useState<FeedEntry[]>([]);
 
@@ -156,11 +206,20 @@ export default function AppV2() {
   }, []);
 
   const refreshLiveData = useCallback(async () => {
-    await Promise.all([
-      portfolioQuery.refetch(),
-      agentQuery.refetch(),
-      contractsQuery.refetch(),
-    ]);
+    setRefreshing(true);
+    setRefreshError(null);
+
+    try {
+      await Promise.all([
+        portfolioQuery.refetch(),
+        agentQuery.refetch(),
+        contractsQuery.refetch(),
+      ]);
+    } catch (error) {
+      setRefreshError(errorMessage(error, 'Failed to refresh live data.'));
+    } finally {
+      setRefreshing(false);
+    }
   }, [agentQuery, contractsQuery, portfolioQuery]);
 
   const triggerShield = useCallback(async () => {
@@ -269,14 +328,35 @@ export default function AppV2() {
     }
   }, [addLocalFeed, address, contractsQuery.data, liveProfiles, profile, refreshLiveData]);
 
-  if (contractsQuery.isLoading || portfolioQuery.isLoading || agentQuery.isLoading || !primaryAgent) {
+  const bootError = contractsQuery.error || portfolioQuery.error || agentQuery.error;
+  if (bootError) {
     return (
-      <div className="shell" style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div className="display italic" style={{ fontSize: 36 }}>Equinox RWA</div>
-          <div className="eyebrow" style={{ marginTop: 12 }}>Loading Mantle Sepolia portfolio…</div>
-        </div>
-      </div>
+      <FullscreenStatus
+        tone="error"
+        title="Unable to load Mantle Sepolia state"
+        body={errorMessage(bootError, 'The frontend could not read the Equinox backend or chain state.')}
+        onRetry={() => void refreshLiveData()}
+      />
+    );
+  }
+
+  if (contractsQuery.isLoading || portfolioQuery.isLoading || agentQuery.isLoading) {
+    return (
+      <FullscreenStatus
+        title="Loading Mantle Sepolia portfolio"
+        body="Reading contract addresses, vault balances, strategy adapters, and agent registry state."
+      />
+    );
+  }
+
+  if (!primaryAgent) {
+    return (
+      <FullscreenStatus
+        tone="error"
+        title="Agent state unavailable"
+        body="The backend responded, but the live agent snapshot could not be mapped into the dashboard."
+        onRetry={() => void refreshLiveData()}
+      />
     );
   }
 
@@ -319,6 +399,7 @@ export default function AppV2() {
                 assets={assets}
                 venues={venues}
                 onRefresh={() => void refreshLiveData()}
+                refreshing={refreshing}
                 profile={profile}
                 paused={paused}
               />
@@ -341,11 +422,17 @@ export default function AppV2() {
                   </button>
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 14 }}>
-                {assets.map((asset) => (
-                  <BottleCard key={asset.id} asset={asset} />
-                ))}
-              </div>
+              {refreshError ? <InlineStatus tone="error">{refreshError}</InlineStatus> : null}
+              {portfolioQuery.isFetching && !refreshing ? <InlineStatus tone="info">Refreshing vault balances and adapter snapshots…</InlineStatus> : null}
+              {assets.length > 0 ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 14 }}>
+                  {assets.map((asset) => (
+                    <BottleCard key={asset.id} asset={asset} />
+                  ))}
+                </div>
+              ) : (
+                <InlineStatus tone="warn">No supported assets were returned by the backend.</InlineStatus>
+              )}
             </section>
 
             <section className="section" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.55fr) 360px', gap: 32 }}>
@@ -373,9 +460,10 @@ export default function AppV2() {
                   </div>
                 </div>
                 {actionError ? (
-                  <div style={{ marginBottom: 16, padding: '10px 12px', borderRadius: 10, border: '1px solid var(--negative)', color: 'var(--negative)', background: 'color-mix(in srgb, var(--negative) 10%, transparent)' }}>
-                    {actionError}
-                  </div>
+                  <InlineStatus tone="error">{actionError}</InlineStatus>
+                ) : null}
+                {agentQuery.isFetching && !actionBusy ? (
+                  <InlineStatus tone="info">Syncing latest agent decision log…</InlineStatus>
                 ) : null}
                 <AgentMemoStream entries={deferredFeed} personality={personality} limit={5} />
               </div>

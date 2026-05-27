@@ -31,12 +31,14 @@ export function CapitalTopology({
   assets,
   venues = [],
   onRefresh,
+  refreshing = false,
   profile,
   paused,
 }: {
   assets: Asset[];
   venues?: Venue[];
   onRefresh: () => void;
+  refreshing?: boolean;
   profile: string;
   paused: boolean;
 }) {
@@ -94,8 +96,8 @@ export function CapitalTopology({
           <span className="eyebrow dim">· live · {profile} bounds</span>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
-          <button className="btn btn-sm btn-outline" onClick={onRefresh}>
-            <Icon name="swap" size={12} /> Refresh state
+          <button className="btn btn-sm btn-outline" onClick={onRefresh} disabled={refreshing} type="button">
+            <Icon name="swap" size={12} /> {refreshing ? 'Refreshing...' : 'Refresh state'}
           </button>
         </div>
       </div>

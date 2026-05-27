@@ -35,6 +35,11 @@ export function AgentsPage({ agents, onSelect, selected }: {
             <div style={{ textAlign: 'right' }}>AUM</div>
           </div>
           <div className="divider" />
+          {agents.length === 0 ? (
+            <div style={{ padding: 24, color: 'var(--text-mute)', fontSize: 13, lineHeight: 1.6 }}>
+              No live agent registry rows are available yet. Refresh backend state after the agent contract is configured.
+            </div>
+          ) : null}
           {agents.map((a, i) => (
             <div key={a.id}
               onClick={() => onSelect(a)}
@@ -195,6 +200,11 @@ export function StrategyPage({ venues, profile, profiles }: {
           <div style={{ textAlign: 'right' }}>State</div>
         </div>
         <div className="divider" />
+        {venues.length === 0 ? (
+          <div style={{ padding: 24, color: 'var(--text-mute)', fontSize: 13, lineHeight: 1.6 }}>
+            No strategy adapters were returned by the backend. Check contract addresses and strategy registry configuration.
+          </div>
+        ) : null}
         {venues.map((v, i) => (
           <div key={i} style={{
             display: 'grid', gridTemplateColumns: '1.6fr 0.8fr 1fr 1fr 1fr 110px',

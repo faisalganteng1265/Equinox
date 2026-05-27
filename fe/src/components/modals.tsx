@@ -211,6 +211,8 @@ export function VaultActionModal({
 
   const walletBalance = walletBalanceQuery.data || 0n;
   const allowance = mode === 'deposit' ? allowanceQuery.data || 0n : 0n;
+  const balanceError = walletBalanceQuery.error instanceof Error ? walletBalanceQuery.error.message : null;
+  const allowanceError = allowanceQuery.error instanceof Error ? allowanceQuery.error.message : null;
 
   const txPlan = useMemo(() => {
     if (!parsedAmount || !selectedAssetAddress || !selectedAsset) {
@@ -374,6 +376,11 @@ export function VaultActionModal({
       return;
     }
 
+    if (mode === 'deposit' && parsedAmount > walletBalance) {
+      setError(`Wallet balance is too low for this ${selectedAsset.symbol} deposit.`);
+      return;
+    }
+
     setError(null);
     setSubmitting(true);
     setStep(3);
@@ -452,6 +459,11 @@ export function VaultActionModal({
                 <StatusNotice tone="warn">The connected wallet is not on Mantle Sepolia.</StatusNotice>
               </div>
             ) : null}
+            {balanceError || allowanceError ? (
+              <div style={{ marginTop: 12 }}>
+                <StatusNotice tone="error">{balanceError || allowanceError}</StatusNotice>
+              </div>
+            ) : null}
 
             <div style={{ height: 18 }} />
             <label style={{ fontSize: 12, color: 'var(--text-mute)', display: 'block', marginBottom: 8 }}>Asset</label>
@@ -477,7 +489,9 @@ export function VaultActionModal({
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 6 }}>
               {mode === 'deposit'
-                ? `Wallet balance ${Number(formattedWalletBalance).toLocaleString(undefined, { maximumFractionDigits: selectedAsset?.symbol === 'fBTC' ? 6 : 2 })} ${selectedAsset?.symbol}`
+                ? walletBalanceQuery.isLoading
+                  ? `Wallet balance loading ${selectedAsset?.symbol}`
+                  : `Wallet balance ${Number(formattedWalletBalance).toLocaleString(undefined, { maximumFractionDigits: selectedAsset?.symbol === 'fBTC' ? 6 : 2 })} ${selectedAsset?.symbol}`
                 : `Vault exposure ${Number(vaultExposure).toLocaleString(undefined, { maximumFractionDigits: selectedAsset?.symbol === 'fBTC' ? 6 : 2 })} ${selectedAsset?.symbol}`}
             </div>
 
@@ -523,7 +537,7 @@ export function VaultActionModal({
               className="btn btn-primary"
               onClick={() => setStep(2)}
               type="button"
-              disabled={!parsedAmount || parsedAmount <= 0n}
+              disabled={!parsedAmount || parsedAmount <= 0n || Boolean(balanceError || allowanceError)}
             >
               Continue <Icon name="arrow-right" size={14} />
             </button>
@@ -563,8 +577,8 @@ export function VaultActionModal({
           </div>
           <div style={{ padding: '14px 22px', borderTop: '1px solid var(--border-soft)', display: 'flex', justifyContent: 'space-between' }}>
             <button className="btn btn-ghost" onClick={() => setStep(1)} type="button">← Back</button>
-            <button className="btn btn-primary" onClick={executeAction} type="button">
-              {mode === 'deposit' ? 'Sign and deposit' : 'Sign and withdraw'}
+            <button className="btn btn-primary" onClick={executeAction} type="button" disabled={submitting}>
+              {submitting ? 'Submitting...' : mode === 'deposit' ? 'Sign and deposit' : 'Sign and withdraw'}
             </button>
           </div>
         </>
@@ -668,7 +682,11 @@ export function FaucetModal({
   const ownerLabel = walletLabel(vaultOwner);
 
   async function copyOwnerAddress() {
-    await navigator.clipboard.writeText(vaultOwner);
+    try {
+      await navigator.clipboard.writeText(vaultOwner);
+    } catch {
+      setError('Could not copy the owner address from this browser session.');
+    }
   }
 
   async function mintSelectedAsset() {

@@ -6,7 +6,10 @@ onlyBuiltDependencies:
   - "sharp"
   - "unrs-resolver"
 allowBuilds:
+  bufferutil: true
   esbuild: true
+  keccak: true
   sharp: true
   unrs-resolver: true
+  utf-8-validate: true
 blockExoticSubdeps: false

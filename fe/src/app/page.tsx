@@ -1,32 +1,31 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { V2TopBar, MemoHero } from '@/components/v2-hero';
-import { BottleCard, RiskDial, DecisionTape, AgentMemoStream } from '@/components/v2-pieces';
-import { CapitalTopology } from '@/components/v2-topology';
-import { WalletConnectModal, DepositModal, RiskShieldModal } from '@/components/modals';
-import { AgentsPage, StrategyPage, HistoryPage } from '@/components/agents-page';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useAccount } from 'wagmi';
+
+import { AgentsPage, HistoryPage, StrategyPage } from '@/components/agents-page';
 import { Icon } from '@/components/icons';
-import { TweaksPanel, TweakSection, TweakRadio, TweakColor, TweakSelect, useTweaks } from '@/components/tweaks-panel';
+import { RiskShieldModal, VaultActionModal } from '@/components/modals';
+import { BottleCard, DecisionTape, RiskDial, AgentMemoStream } from '@/components/v2-pieces';
+import { V2TopBar, MemoHero } from '@/components/v2-hero';
+import { CapitalTopology } from '@/components/v2-topology';
+import { WalletButton } from '@/components/wallet-button';
+import { TweaksPanel, TweakColor, TweakRadio, TweakSection, TweakSelect, useTweaks } from '@/components/tweaks-panel';
+import { equinoxApi } from '@/lib/equinox-api';
 import {
-  ASSETS,
-  AGENTS,
-  VENUES,
-  RISK_PROFILES,
-  FEED_LIBRARY,
-  seedFeedV2,
-  nowStamp,
-} from '@/lib/data';
-import type { FeedEntry, RiskProfileName } from '@/lib/data';
+  assetAddressForKey,
+  buildBlockedTargets,
+  buildDecisionFeed,
+  buildPreviewFeed,
+  buildPrimaryAgent,
+  buildProfileTargets,
+  buildUiAssets,
+  buildUiVenues,
+} from '@/lib/equinox-ui';
+import { FEED_LIBRARY, RISK_PROFILES, STATIC_AGENTS, buildSparkSeries, nowStamp, seedFeedV2, type FeedEntry, type RiskProfileName } from '@/lib/data';
 
-interface WalletInfo {
-  address: string;
-  short: string;
-  balance: string;
-  wallet: string;
-}
-
-type ModalKind = 'connect' | 'deposit' | 'shield' | null;
+type ModalKind = 'deposit' | 'withdraw' | 'shield' | null;
 type PageKind = 'portfolio' | 'agents' | 'strategy' | 'history';
 type PivotState = 'idle' | 'scanning' | 'bridging' | 'settled';
 
@@ -44,6 +43,37 @@ function softOf(hex: string) {
 export default function AppV2() {
   const [tweak, setTweak] = useTweaks(TWEAK_DEFAULTS);
   const { theme, accent, personality, profile } = tweak;
+  const { address, chainId, isConnected } = useAccount();
+  const [page, setPage] = useState<PageKind>('portfolio');
+  const [isPagePending, startPageTransition] = useTransition();
+  const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
+  const [modal, setModal] = useState<ModalKind>(null);
+  const [paused, setPaused] = useState(false);
+  const [pivotState, setPivotState] = useState<PivotState>('idle');
+  const [actionBusy, setActionBusy] = useState<'preview' | 'execute' | 'reject' | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [shieldAttempt, setShieldAttempt] = useState<{ asset: string; weight: number }>({ asset: 'fBTC', weight: 0.38 });
+  const [ambientFeed, setAmbientFeed] = useState<FeedEntry[]>(() => seedFeedV2());
+  const [localFeed, setLocalFeed] = useState<FeedEntry[]>([]);
+  const feedKeyRef = useRef(200);
+
+  const contractsQuery = useQuery({
+    queryKey: ['equinox-contracts'],
+    queryFn: () => equinoxApi.getContracts(),
+  });
+
+  const portfolioQuery = useQuery({
+    queryKey: ['equinox-portfolio'],
+    queryFn: () => equinoxApi.getPortfolio(),
+    refetchInterval: 15_000,
+  });
+
+  const agentQuery = useQuery({
+    queryKey: ['equinox-agent', contractsQuery.data?.core.agentId],
+    queryFn: () => equinoxApi.getAgent(contractsQuery.data!.core.agentId),
+    enabled: Boolean(contractsQuery.data?.core.agentId),
+    refetchInterval: 15_000,
+  });
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -54,109 +84,263 @@ export default function AppV2() {
     document.documentElement.style.setProperty('--accent-soft', softOf(accent));
   }, [accent]);
 
-  const [wallet, setWallet] = useState<WalletInfo | null>(null);
-  const [page, setPage] = useState<PageKind>('portfolio');
-  const [modal, setModal] = useState<ModalKind>(null);
-  const [paused, setPaused] = useState(false);
-  const [pivotState, setPivotState] = useState<PivotState>('idle');
-
-  const [feed, setFeed] = useState<FeedEntry[]>(() => seedFeedV2());
-  const feedKeyRef = useRef(200);
-
   useEffect(() => {
-    if (paused) return;
-    const t = setInterval(() => {
-      setFeed(prev => {
-        const lib = FEED_LIBRARY;
-        const next = { ...lib[Math.floor(Math.random() * lib.length)] };
+    if (paused) {
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setAmbientFeed((current) => {
+        const next = { ...FEED_LIBRARY[Math.floor(Math.random() * FEED_LIBRARY.length)] };
         next._key = ++feedKeyRef.current;
         next.timestamp = nowStamp();
         next.ago = 'just now';
-        return [next, ...prev].slice(0, 18);
+        return [next, ...current].slice(0, 12);
       });
-    }, 7200);
-    return () => clearInterval(t);
+    }, 7_200);
+
+    return () => clearInterval(timer);
   }, [paused]);
 
-  const triggerShield = useCallback(() => {
-    setFeed(prev => {
-      const guard = { ...FEED_LIBRARY.find(e => e.kind === 'guard')! };
-      guard._key = ++feedKeyRef.current;
-      guard.timestamp = nowStamp();
-      guard.ago = 'just now';
-      return [guard, ...prev].slice(0, 18);
-    });
-    setModal('shield');
+  useEffect(() => {
+    const remoteProfile = portfolioQuery.data?.vault.currentRiskProfile;
+    if (remoteProfile && remoteProfile !== profile && localFeed.length === 0) {
+      setTweak({ profile: remoteProfile });
+    }
+  }, [localFeed.length, portfolioQuery.data?.vault.currentRiskProfile, profile, setTweak]);
+
+  const assets = useMemo(
+    () => (portfolioQuery.data ? buildSparkSeries(buildUiAssets(portfolioQuery.data)) : []),
+    [portfolioQuery.data],
+  );
+  const venues = useMemo(
+    () => (portfolioQuery.data ? buildUiVenues(portfolioQuery.data) : []),
+    [portfolioQuery.data],
+  );
+  const primaryAgent = useMemo(() => {
+    if (!portfolioQuery.data || !agentQuery.data) {
+      return null;
+    }
+
+    return buildPrimaryAgent(agentQuery.data, portfolioQuery.data, profile);
+  }, [agentQuery.data, portfolioQuery.data, profile]);
+  const agents = useMemo(() => {
+    if (!primaryAgent) {
+      return STATIC_AGENTS;
+    }
+
+    return [primaryAgent, ...STATIC_AGENTS];
+  }, [primaryAgent]);
+  const selectedAgent = useMemo(
+    () => agents.find((agent) => agent.id === selectedAgentId) || primaryAgent || agents[0] || null,
+    [agents, primaryAgent, selectedAgentId],
+  );
+
+  const onChainFeed = useMemo(() => (agentQuery.data ? buildDecisionFeed(agentQuery.data) : []), [agentQuery.data]);
+  const feed = useMemo(() => [...localFeed, ...onChainFeed, ...ambientFeed].slice(0, 18), [ambientFeed, localFeed, onChainFeed]);
+  const deferredFeed = useDeferredValue(feed);
+  const weightedApy = useMemo(
+    () => assets.reduce((sum, asset) => sum + asset.weight * asset.apy, 0),
+    [assets],
+  );
+  const navValue = Number(portfolioQuery.data?.vault.totalPortfolioValueFormatted || 0);
+
+  const memo = useMemo(() => {
+    const latest = deferredFeed.find((entry) => entry.kind === 'rebalance') || deferredFeed[0];
+
+    return {
+      no: String(agentQuery.data?.decisionCount || 1),
+      date: new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }),
+      kind: latest?.kind === 'guard' ? 'Guardrail' : 'Rebalance',
+      delta: latest?.delta || '0.0%',
+      from: 'USDY',
+      to: 'mETH',
+      body: latest?.body || 'Waiting for the latest agent decision from Mantle.',
+      tx: latest?.tx || '0x0',
+    };
+  }, [agentQuery.data?.decisionCount, deferredFeed]);
+
+  const addLocalFeed = useCallback((entry: FeedEntry) => {
+    setLocalFeed((current) => [
+      {
+        ...entry,
+        _key: Date.now() + current.length,
+        timestamp: entry.timestamp || nowStamp(),
+        ago: 'just now',
+      },
+      ...current,
+    ].slice(0, 8));
   }, []);
 
+  const refreshLiveData = useCallback(async () => {
+    await Promise.all([
+      portfolioQuery.refetch(),
+      agentQuery.refetch(),
+      contractsQuery.refetch(),
+    ]);
+  }, [agentQuery, contractsQuery, portfolioQuery]);
+
+  const triggerShield = useCallback(async () => {
+    if (!contractsQuery.data) {
+      return;
+    }
+
+    setActionBusy('reject');
+    setActionError(null);
+
+    try {
+      const result = await equinoxApi.rejectRebalance({
+        targets: buildBlockedTargets(contractsQuery.data),
+        reasoning: {
+          source: 'frontend',
+          mode: 'guardrail-demo',
+          profile,
+        },
+        detailsUri: `equinox://frontend/reject/${Date.now()}`,
+      });
+
+      setShieldAttempt({
+        asset: result.preview.offendingAssetKey || 'fBTC',
+        weight: result.preview.attemptedWeightBps / 10_000,
+      });
+      addLocalFeed({
+        kind: 'guard',
+        title: 'Blocked decision recorded on-chain',
+        body: `Rejected decision logged with reasoning hash ${result.reasoningHash.slice(0, 10)}…`,
+        venue: 'Risk Guardrail',
+        delta: 'blocked',
+        tx: result.receipt.transactionHash,
+      });
+      setModal('shield');
+      await refreshLiveData();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'Failed to record rejected decision.');
+    } finally {
+      setActionBusy(null);
+    }
+  }, [addLocalFeed, contractsQuery.data, profile, refreshLiveData]);
+
+  const previewCurrentPlan = useCallback(async () => {
+    if (!contractsQuery.data) {
+      return;
+    }
+
+    setActionBusy('preview');
+    setActionError(null);
+
+    try {
+      const preview = await equinoxApi.previewRebalance({
+        targets: buildProfileTargets(contractsQuery.data, RISK_PROFILES[profile].target),
+      });
+
+      addLocalFeed(buildPreviewFeed(preview, profile));
+      if (!preview.preview.ok) {
+        setShieldAttempt({
+          asset: preview.preview.offendingAssetKey || 'fBTC',
+          weight: preview.preview.attemptedWeightBps / 10_000,
+        });
+        setModal('shield');
+      }
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'Preview request failed.');
+    } finally {
+      setActionBusy(null);
+    }
+  }, [addLocalFeed, contractsQuery.data, profile]);
+
+  const executeCurrentPlan = useCallback(async () => {
+    if (!contractsQuery.data) {
+      return;
+    }
+
+    setActionBusy('execute');
+    setActionError(null);
+
+    try {
+      const result = await equinoxApi.executeRebalance({
+        targets: buildProfileTargets(contractsQuery.data, RISK_PROFILES[profile].target),
+        reasoning: {
+          source: 'frontend',
+          mode: 'execute-profile',
+          profile,
+          wallet: address,
+        },
+        detailsUri: `equinox://frontend/execute/${Date.now()}`,
+      });
+
+      addLocalFeed({
+        kind: 'rebalance',
+        title: `${profile} targets executed`,
+        body: `Authorized backend agent executed a rebalance and wrote tx ${result.receipt.transactionHash.slice(0, 10)}… on Mantle.`,
+        venue: 'Backend agent',
+        delta: `${result.preview.totalWeightBps / 100}% target`,
+        tx: result.receipt.transactionHash,
+      });
+      await refreshLiveData();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'Execute request failed.');
+    } finally {
+      setActionBusy(null);
+    }
+  }, [addLocalFeed, address, contractsQuery.data, profile, refreshLiveData]);
+
   const triggerPivot = useCallback(() => {
-    if (pivotState !== 'idle') { setPivotState('idle'); return; }
+    if (pivotState !== 'idle') {
+      setPivotState('idle');
+      return;
+    }
+
     setPivotState('scanning');
     setTimeout(() => {
       setPivotState('bridging');
-      setFeed(prev => {
-        const bridge = { ...FEED_LIBRARY.find(e => e.kind === 'bridge')! };
-        bridge._key = ++feedKeyRef.current;
-        bridge.timestamp = nowStamp();
-        bridge.ago = 'just now';
-        return [bridge, ...prev].slice(0, 18);
+      addLocalFeed({
+        kind: 'bridge',
+        title: 'CeFi route simulation settled',
+        body: 'The frontend simulated a venue pivot to show how routing can be visualized before protocol-specific adapters go live.',
+        venue: 'Bybit route simulator',
+        delta: 'route simulated',
+        tx: null,
       });
-      setTimeout(() => setPivotState('settled'), 2800);
+      setTimeout(() => setPivotState('settled'), 2_800);
     }, 900);
-  }, [pivotState]);
+  }, [addLocalFeed, pivotState]);
 
-  const assets = useMemo(() => {
-    const targets = RISK_PROFILES[profile].target;
-    return ASSETS.map(a => ({ ...a, weight: targets[a.id] ?? a.weight }));
-  }, [profile]);
+  if (contractsQuery.isLoading || portfolioQuery.isLoading || agentQuery.isLoading || !primaryAgent) {
+    return (
+      <div className="shell" style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div className="display italic" style={{ fontSize: 36 }}>Equinox RWA</div>
+          <div className="eyebrow" style={{ marginTop: 12 }}>Loading Mantle Sepolia portfolio…</div>
+        </div>
+      </div>
+    );
+  }
 
-  const navValue = useMemo(() =>
-    assets.reduce((s, a) => s + a.balance * a.price, 0),
-    [assets]
-  );
-
-  const yourAgent = AGENTS.find(a => a.isYou)!;
-
-  const memo = useMemo(() => {
-    const latest = feed.find(e => e.kind === 'rebalance') || feed[0];
-    return {
-      no: '412',
-      date: new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }),
-      kind: 'Rebalance',
-      delta: '4.2% of capital',
-      from: 'USDY',
-      to: 'mETH',
-      body: latest.body,
-      tx: latest.tx || '0x9a2c…f4b1',
-    };
-  }, [feed]);
+  const canOpenVaultModal = Boolean(contractsQuery.data && portfolioQuery.data);
 
   return (
     <>
       <div className="shell">
         <V2TopBar
-          wallet={wallet}
-          onConnect={() => setModal('connect')}
-          onDisconnect={() => setWallet(null)}
+          walletSlot={<WalletButton />}
           page={page}
-          setPage={(p) => setPage(p as PageKind)}
+          setPage={(nextPage) => startPageTransition(() => setPage(nextPage as PageKind))}
         />
 
-        {page === 'portfolio' && (
+        {page === 'portfolio' ? (
           <>
             <MemoHero
               memo={memo}
               navValue={navValue}
-              change24={1.84}
-              ytd={9.42}
-              agent={yourAgent}
+              change24={Math.max(0.12, weightedApy / 3)}
+              ytd={Math.max(1.2, weightedApy * 1.9)}
+              agent={primaryAgent}
               profile={profile}
             />
 
             <section className="section">
               <CapitalTopology
                 assets={assets}
-                venues={VENUES}
                 pivotState={pivotState}
                 onPivot={triggerPivot}
                 profile={profile}
@@ -169,20 +353,26 @@ export default function AppV2() {
                 <div>
                   <h2>Positions, by class</h2>
                   <div className="eyebrow" style={{ marginTop: 8 }}>
-                    {assets.length} assets · weighted APY {assets.reduce((s, a) => s + a.weight * a.apy, 0).toFixed(2)}%
+                    {assets.length} assets · weighted APY {weightedApy.toFixed(2)}%
                   </div>
                 </div>
-                <button className="btn btn-outline" onClick={() => setModal('deposit')}>
-                  <Icon name="plus" size={13} /> Adjust position
-                </button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="btn btn-outline" onClick={() => canOpenVaultModal && setModal('withdraw')} type="button">
+                    <Icon name="minus" size={13} /> Withdraw
+                  </button>
+                  <button className="btn btn-primary" onClick={() => canOpenVaultModal && setModal('deposit')} type="button">
+                    <Icon name="plus" size={13} /> Deposit
+                  </button>
+                </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 14 }}>
-                {assets.map(a => <BottleCard key={a.id} asset={a} />)}
+                {assets.map((asset) => (
+                  <BottleCard key={asset.id} asset={asset} />
+                ))}
               </div>
             </section>
 
             <section className="section" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.55fr) 360px', gap: 32 }}>
-              {/* Agent reasoning */}
               <div>
                 <div className="section-head" style={{ marginBottom: 24 }}>
                   <div>
@@ -191,92 +381,123 @@ export default function AppV2() {
                       Streaming · {personality === 'terminal' ? 'telemetry' : 'analyst memo'} · ERC-8004 logged
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <button className="btn btn-sm btn-outline" onClick={() => setPaused(p => !p)}>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    <button className="btn btn-sm btn-outline" onClick={() => setPaused((value) => !value)} type="button">
                       <Icon name={paused ? 'play' : 'pause'} size={12} /> {paused ? 'Resume' : 'Pause'}
                     </button>
-                    <button className="btn btn-sm btn-outline" onClick={triggerShield}>
-                      <Icon name="shield" size={12} color="var(--negative)" /> Trigger shield
+                    <button className="btn btn-sm btn-outline" onClick={() => void previewCurrentPlan()} type="button" disabled={actionBusy !== null}>
+                      {actionBusy === 'preview' ? 'Previewing…' : 'Preview plan'}
+                    </button>
+                    <button className="btn btn-sm btn-outline" onClick={() => void executeCurrentPlan()} type="button" disabled={actionBusy !== null}>
+                      {actionBusy === 'execute' ? 'Executing…' : 'Execute plan'}
+                    </button>
+                    <button className="btn btn-sm btn-outline" onClick={() => void triggerShield()} type="button" disabled={actionBusy !== null}>
+                      <Icon name="shield" size={12} color="var(--negative)" /> {actionBusy === 'reject' ? 'Recording…' : 'Record blocked'}
                     </button>
                   </div>
                 </div>
-                <AgentMemoStream entries={feed} personality={personality} limit={5} />
+                {actionError ? (
+                  <div style={{ marginBottom: 16, padding: '10px 12px', borderRadius: 10, border: '1px solid var(--negative)', color: 'var(--negative)', background: 'color-mix(in srgb, var(--negative) 10%, transparent)' }}>
+                    {actionError}
+                  </div>
+                ) : null}
+                <AgentMemoStream entries={deferredFeed} personality={personality} limit={5} />
               </div>
 
-              {/* Risk dial */}
               <div style={{ paddingTop: 70 }}>
                 <RiskDial
                   profile={profile}
-                  setProfile={(p) => setTweak({ profile: p as RiskProfileName })}
+                  setProfile={(nextProfile) => setTweak({ profile: nextProfile as RiskProfileName })}
                   profiles={RISK_PROFILES}
                   assets={assets}
                 />
               </div>
             </section>
           </>
-        )}
+        ) : null}
 
-        {page === 'agents' && (
+        {page === 'agents' ? (
           <section style={{ paddingTop: 36 }}>
-            <AgentsPage agents={AGENTS} selected={yourAgent} onSelect={() => {}} />
+            <AgentsPage
+              agents={agents}
+              selected={selectedAgent}
+              onSelect={(agent) => setSelectedAgentId(agent.id)}
+            />
           </section>
-        )}
-        {page === 'strategy' && (
+        ) : null}
+
+        {page === 'strategy' ? (
           <section style={{ paddingTop: 36 }}>
-            <StrategyPage venues={VENUES} profile={profile} profiles={RISK_PROFILES} />
+            <StrategyPage venues={venues} profile={profile} profiles={RISK_PROFILES} />
           </section>
-        )}
-        {page === 'history' && (
+        ) : null}
+
+        {page === 'history' ? (
           <section style={{ paddingTop: 36 }}>
-            <HistoryPage entries={feed} />
+            <HistoryPage entries={deferredFeed} />
           </section>
-        )}
+        ) : null}
       </div>
 
-      {/* Ticker tape */}
       <div style={{ position: 'sticky', bottom: 0, zIndex: 40, background: 'var(--ink)' }}>
-        <DecisionTape entries={feed.slice(0, 12)} />
+        <DecisionTape entries={deferredFeed.slice(0, 12)} />
       </div>
 
-      {/* Modals */}
-      {modal === 'connect' && (
-        <WalletConnectModal
+      {modal === 'deposit' && contractsQuery.data && portfolioQuery.data ? (
+        <VaultActionModal
+          mode="deposit"
           onClose={() => setModal(null)}
-          onConnect={(w) => { setWallet(w); setModal('deposit'); }}
-        />
-      )}
-      {modal === 'deposit' && (
-        <DepositModal
-          onClose={() => setModal(null)}
+          onComplete={() => void refreshLiveData()}
+          contracts={contractsQuery.data}
+          portfolio={portfolioQuery.data}
           profile={profile}
-          setProfile={(p) => setTweak({ profile: p as RiskProfileName })}
+          setProfile={(nextProfile) => setTweak({ profile: nextProfile })}
           profiles={RISK_PROFILES}
-          onDeposit={() => setModal(null)}
+          walletAddress={address}
+          chainId={chainId}
         />
-      )}
-      {modal === 'shield' && (
+      ) : null}
+
+      {modal === 'withdraw' && contractsQuery.data && portfolioQuery.data ? (
+        <VaultActionModal
+          mode="withdraw"
+          onClose={() => setModal(null)}
+          onComplete={() => void refreshLiveData()}
+          contracts={contractsQuery.data}
+          portfolio={portfolioQuery.data}
+          profile={profile}
+          setProfile={(nextProfile) => setTweak({ profile: nextProfile })}
+          profiles={RISK_PROFILES}
+          walletAddress={address}
+          chainId={chainId}
+        />
+      ) : null}
+
+      {modal === 'shield' ? (
         <RiskShieldModal
           onClose={() => setModal(null)}
-          attempted={{ asset: 'fBTC', weight: 0.38 }}
+          attempted={shieldAttempt}
           profile={profile}
           profiles={RISK_PROFILES}
         />
-      )}
+      ) : null}
 
-      {/* Tweaks panel */}
       <TweaksPanel title="Tweaks">
         <TweakSection label="Appearance" />
         <TweakRadio
           label="Theme"
           value={theme}
-          options={[{ value: 'dark', label: 'Dark' }, { value: 'light', label: 'Light' }]}
-          onChange={v => setTweak({ theme: v })}
+          options={[
+            { value: 'dark', label: 'Dark' },
+            { value: 'light', label: 'Light' },
+          ]}
+          onChange={(value) => setTweak({ theme: value })}
         />
         <TweakColor
           label="Accent"
           value={accent}
           options={['#9DEFC0', '#B4A0FF', '#F5C76B', '#7EBDF2', '#F09A82']}
-          onChange={v => setTweak({ accent: v })}
+          onChange={(value) => setTweak({ accent: value })}
         />
         <TweakSection label="Agent" />
         <TweakSelect
@@ -286,7 +507,7 @@ export default function AppV2() {
             { value: 'analyst', label: 'Analyst memo' },
             { value: 'terminal', label: 'Terminal log' },
           ]}
-          onChange={v => setTweak({ personality: v })}
+          onChange={(value) => setTweak({ personality: value })}
         />
         <TweakSelect
           label="Risk profile"
@@ -296,8 +517,15 @@ export default function AppV2() {
             { value: 'Balanced', label: 'Balanced' },
             { value: 'Aggressive', label: 'Aggressive' },
           ]}
-          onChange={v => setTweak({ profile: v as RiskProfileName })}
+          onChange={(value) => setTweak({ profile: value as RiskProfileName })}
         />
+        <TweakSection label="Status" />
+        <div className="eyebrow" style={{ color: 'var(--paper-3)' }}>
+          Wallet {isConnected ? 'connected' : 'disconnected'} · Page {isPagePending ? 'updating' : page}
+        </div>
+        <div className="eyebrow" style={{ color: 'var(--paper-3)' }}>
+          Vault owner {portfolioQuery.data ? assetAddressForKey(contractsQuery.data!, portfolioQuery.data.assets[0]?.key || 'USDY') ? 'ready' : 'n/a' : 'loading'}
+        </div>
       </TweaksPanel>
     </>
   );

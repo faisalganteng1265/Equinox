@@ -170,7 +170,7 @@ export function buildDecisionFeed(agentSnapshot: AgentSnapshotResponse): FeedEnt
       kind: isBlocked ? 'guard' : 'rebalance',
       title: isBlocked ? 'Vault guardrail blocked a rebalance' : 'Authorized agent committed a live rebalance',
       body: decision.detailsURI
-        ? `Reasoning context: ${decision.detailsURI}`
+        ? decision.detailsURI
         : isBlocked
           ? `Reasoning hash ${shortReasoning} is recorded on-chain for audit.`
           : `Reasoning hash ${shortReasoning} is recorded on-chain. Performance attribution starts after funded positions accrue.`,

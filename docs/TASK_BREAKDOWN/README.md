@@ -2,12 +2,12 @@
 
 Dokumen ini memecah roadmap Equinox menjadi task breakdown per area utama:
 
-- [FE.md](C:/Users/bagas/Downloads/Dapp%20Project/Equinox/docs/TASK_BREAKDOWN/FE.md)
-- [BE.md](C:/Users/bagas/Downloads/Dapp%20Project/Equinox/docs/TASK_BREAKDOWN/BE.md)
-- [SC.md](C:/Users/bagas/Downloads/Dapp%20Project/Equinox/docs/TASK_BREAKDOWN/SC.md)
-- [AI.md](C:/Users/bagas/Downloads/Dapp%20Project/Equinox/docs/TASK_BREAKDOWN/AI.md)
+- [FE.md](FE.md)
+- [BE.md](BE.md)
+- [SC.md](SC.md)
+- [AI.md](AI.md)
 
-Ini adalah breakdown operasional dari [ROADMAP_GAP_TO_FINAL.md](C:/Users/bagas/Downloads/Dapp%20Project/Equinox/docs/ROADMAP_GAP_TO_FINAL.md).
+Ini adalah breakdown operasional dari [ROADMAP_GAP_TO_FINAL.md](../ROADMAP_GAP_TO_FINAL.md).
 
 ---
 
@@ -16,9 +16,11 @@ Ini adalah breakdown operasional dari [ROADMAP_GAP_TO_FINAL.md](C:/Users/bagas/D
 ### FE
 
 - wallet flow, faucet, deposit, withdraw, preview, execute, dan reject sudah hidup
+- auto vault creation: wallet connect tanpa vault langsung trigger create, tidak perlu tombol manual
+- multi-wallet support: switch wallet ke akun baru tidak lagi error boot screen
+- reasoning text dari OpenRouter ditampilkan langsung di agent feed
 - explorer deep link sudah menyentuh tx, registry, asset, dan adapter surfaces
 - responsive pass dasar sudah beres
-- checklist manual ada di [FE_MANUAL_TEST_CHECKLIST.md](C:/Users/bagas/Downloads/Dapp%20Project/Equinox/docs/FE_MANUAL_TEST_CHECKLIST.md)
 
 ### BE
 
@@ -26,91 +28,72 @@ Ini adalah breakdown operasional dari [ROADMAP_GAP_TO_FINAL.md](C:/Users/bagas/D
 - error contract sudah stabil dengan `reason` machine-readable
 - request correlation dan structured logging sudah ada
 - retry/timeout RPC dasar sudah ada
-- smoke test backend sudah ada
-- strategy logic tetap berada di backend
+- **OpenRouter reasoning layer sudah ada** (`reasoning.ts`)
+- **Strategy computation layer sudah ada** (`strategy.ts`)
+- **Autonomous orchestrator loop sudah ada** (`orchestrator.ts`)
+- **Real market data fetching sudah ada** (`market-sim.ts`) — US Treasury, DeFiLlama, Bybit API
+- **Per-user vault iteration sudah ada** — orchestrator looping semua vault dari VaultFactory
 
 ### SC
 
-- fuzz test sudah bertambah
-- invariant suite sudah hidup
+- fuzz test dan invariant suite sudah hidup
 - gas report baseline sudah ada
 - deployment export artifact sudah ada
-- current custody model masih `single-owner vault`
+- VaultFactory sudah live — 1 user = 1 vault = 1 agent identity
 
 ### AI / Reasoning
 
-- tidak ada lagi service Python terpisah
-- arah terbaru adalah `OpenRouter` untuk reasoning only
-- strategy calculation tetap berada di backend
-- reasoning nantinya dihasilkan dari backend melalui provider LLM, bukan service `ai/` terpisah
-
-### Product Direction
-
-- target berikutnya adalah `VaultFactory`
-- narasi target:
-  - `1 user = 1 vault`
-  - `1 vault = 1 personal agent identity`
-  - `shared backend engine` untuk strategy dan reasoning
+- OpenRouter integration sudah live di backend
+- Strategy calculation tetap deterministic di backend
+- Reasoning text digenerate dari LLM (gpt-4o-mini) atau fallback deterministik
+- Reasoning text disimpan on-chain via `detailsURI` dan ditampilkan di FE agent feed
+- Real data: USDY dari US Treasury, fBTC dari Bybit, mETH dari DeFiLlama
 
 ---
 
 ## P0 Status
 
-- `FE P0`: selesai
-- `BE P0`: selesai
-- `SC P0`: selesai
-- `AI architecture decision P0`: selesai
-
-Artinya, Equinox sekarang sudah melewati fase wiring awal dan masuk ke fase `P1 execution`.
+- `FE P0`: ✅ selesai
+- `BE P0`: ✅ selesai
+- `SC P0`: ✅ selesai
+- `AI architecture decision P0`: ✅ selesai
 
 ---
 
-## Next Critical Sequence
+## P1 Status
 
-Urutan paling rasional setelah semua `P0` ditutup:
-
-1. `SC account model + BE P1`
-   Tujuannya: definisikan `VaultFactory`, mapping vault per user, lalu split domain modules, persistence, scheduler, dan strategy loop.
-
-2. `Reasoning P1`
-   Tujuannya: tambahkan `OpenRouter` reasoning layer di backend tanpa memindahkan strategy logic keluar dari `BE`.
-
-3. `FE P1`
-   Tujuannya: refactor page composition, tambah automated FE testing, dan siapkan surface reasoning yang lebih kaya.
-
-4. `SC P1`
-   Tujuannya: read helper yang lebih ramah FE/BE, audit-prep docs, dan review interface adapter untuk venue nyata.
-
-5. `BE P2 + SC P2`
-   Tujuannya: real market data, protocol integration path, emergency/admin hardening, dan mainnet readiness.
+- `BE reasoning layer`: ✅ selesai
+- `BE scheduler/orchestrator`: ✅ selesai
+- `BE per-user vault context`: ✅ selesai
+- `BE real market data`: ✅ selesai
+- `AI reasoning integration`: ✅ selesai
+- `AI fallback safety`: ✅ selesai
+- `FE reasoning display`: ✅ selesai
+- `SC VaultFactory`: ✅ selesai
+- `SC fuzz + invariant tests`: ✅ selesai
+- `BE persistence layer`: ⏭️ skip untuk hackathon — on-chain = persistent
+- `BE domain module split`: ⏳ nice-to-have, belum kritis
 
 ---
 
-## Parallel Work Guidance
+## Next Critical Sequence (Post-Hackathon)
 
-### Aman diparalelkan
-
-- `FE P1` dan `BE P1`
-- `SC P1` dan `BE P1`
-- `Reasoning P1` dan `FE P1`
-
-### Butuh sinkronisasi ketat
-
-- perubahan shape response `BE` sambil FE membangun automated tests
-- perubahan prompt/response reasoning saat FE mulai menampilkan explainability surface
-- perubahan ABI atau helper view `SC` saat FE/BE sedang mengunci contract read path
+1. `BE P2` — real Bybit connector, real protocol adapters
+2. `SC P2` — audit prep, emergency controls, real adapter interfaces
+3. `FE P2` — richer reasoning UI, performance attribution, institutional reporting
+4. `BE + SC P3` — mainnet readiness, key management, monitoring
 
 ---
 
-## Suggested Milestone Labels
+## Milestone Labels
 
-- `M0-demo-stability`
-- `M1-p0-complete`
-- `M2-backend-foundation`
-- `M3-openrouter-reasoning`
-- `M4-automation-loop`
-- `M5-real-data-snapshots`
-- `M6-smart-contract-audit-prep`
-- `M7-protocol-integration`
-- `M8-mainnet-readiness`
-- `M9-institutional-controls`
+- `M0-demo-stability` ✅
+- `M1-p0-complete` ✅
+- `M2-backend-foundation` ✅
+- `M3-openrouter-reasoning` ✅
+- `M4-automation-loop` ✅
+- `M5-real-data-snapshots` ✅
+- `M6-smart-contract-audit-prep` ⏳
+- `M7-protocol-integration` ⏳
+- `M8-mainnet-readiness` ⏳
+- `M9-institutional-controls` ⏳

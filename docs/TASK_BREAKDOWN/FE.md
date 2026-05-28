@@ -7,7 +7,7 @@ Membuat `fe/` menjadi frontend Equinox yang:
 - stabil untuk demo hackathon
 - jelas untuk user wallet flow
 - siap untuk manual testing penuh
-- mudah dihubungkan ke automation backend nanti
+- mudah dihubungkan ke automation backend
 
 ---
 
@@ -18,107 +18,102 @@ Membuat `fe/` menjadi frontend Equinox yang:
 - Next.js app hidup
 - wallet connect via `RainbowKit`
 - read portfolio live via backend proxy
-- deposit and withdraw via wallet
+- deposit dan withdraw via wallet
 - preview / execute / reject via backend
 - Mantle gas estimate via `@mantleio/sdk`
 - demo faucet flow via backend `/api/demo/mint`
 - tx explorer link untuk write flow
 - agent registry, decision feed, dan topology sudah live
 - responsive pass dasar dan micro-polish P0 sudah beres
-- checklist manual ada di [FE_MANUAL_TEST_CHECKLIST.md](C:/Users/bagas/Downloads/Dapp%20Project/Equinox/docs/FE_MANUAL_TEST_CHECKLIST.md)
+- **auto vault creation**: wallet connect tanpa vault langsung trigger create otomatis
+- **multi-wallet support**: switch wallet ke akun baru tidak lagi menampilkan boot error
+- **reasoning text display**: agent feed menampilkan teks reasoning dari OpenRouter/fallback langsung
 
 ### Yang masih tertinggal
 
-- `page.tsx` masih cukup besar
+- `page.tsx` masih cukup besar (nice-to-have untuk di-split)
 - belum ada automated FE test harness
-- belum ada reasoning UI yang kaya untuk AI output berikutnya
+- confidence score belum ditampilkan secara eksplisit di UI
 
 ---
 
-## P1: Maintainability and Testability
+## P1: Wallet and Vault UX
 
-## Task 1: Refactor Data Mapping Layer
+## Task 1: Auto Vault Creation
 
-### Work
+**Status: ✅ DONE**
 
-- pindahkan transform tambahan dari `page.tsx` ke helper atau hooks
-- kecilkan tanggung jawab `page.tsx`
-- kelompokkan selector UI per domain section
+### Apa yang sudah dibangun
 
-### Done when
-
-- `page.tsx` lebih fokus ke composition
-
----
-
-## Task 2: Split Action Components
-
-### Work
-
-- pisahkan action panel dari page utama
-- pisahkan tx state panel
-- pisahkan faucet surface dari container utama
-
-### Done when
-
-- komponen action bisa dirawat tanpa membongkar seluruh halaman
+- `useEffect` otomatis memanggil `createDemoPortfolio()` saat `isKnownMissingVault = true`
+- Loading screen "Setting up your portfolio" selama proses
+- Error screen dengan tombol retry jika creation gagal
+- Tidak ada lagi tombol manual "Create demo portfolio"
 
 ---
 
-## Task 3: Automated Frontend Tests
+## Task 2: Multi-Wallet Support
 
-### Work
+**Status: ✅ DONE**
 
-- tambah unit test minimal untuk helper mapping
-- tambah integration test untuk action state
-- tambah E2E smoke plan untuk:
-  - app load
-  - backend reachable
-  - key controls visible
+### Bug yang diperbaiki
 
-### Done when
+- `contractsQuery` sebelumnya tidak punya guard `enabled`, sehingga langsung call `/contracts?owner=addressB` saat wallet baru connect
+- Backend melempar 404 "No Equinox vault exists for this owner" → boot error screen muncul
+- Fix: `contractsQuery` sekarang di-enable hanya setelah `accountQuery` confirm vault exists
 
-- ada regression harness dasar untuk FE
+---
+
+## Task 3: Reasoning Display di Agent Feed
+
+**Status: ✅ DONE**
+
+### Apa yang sudah dibangun
+
+- `buildDecisionFeed` sekarang menampilkan `decision.detailsURI` langsung sebagai body
+- Jika `detailsURI` ada → tampil teks reasoning dari OpenRouter/fallback
+- Jika tidak ada → tampil pesan hash on-chain seperti sebelumnya
+- Backward compatible dengan decisions lama yang tidak punya detailsURI
+
+---
+
+## P1: Maintainability (Nice-to-Have)
+
+## Task 4: Refactor Data Mapping Layer
+
+**Status: ⏳ post-hackathon**
+
+---
+
+## Task 5: Automated Frontend Tests
+
+**Status: ⏳ post-hackathon**
 
 ---
 
 ## P2: Product Maturity
 
-## Task 4: Richer Portfolio and Reasoning UI
+## Task 6: Richer Portfolio and Reasoning UI
 
-### Work
+**Status: ⏳ Phase 2**
 
-- tampilkan reasoning payload AI yang terstruktur
-- tampilkan confidence score
-- tampilkan snapshot freshness
+- tampilkan confidence score dari reasoning
+- tampilkan snapshot freshness dan source provenance (treasury.gov, bybit, defillama)
 - tampilkan blocked decision analytics
 
-### Done when
+---
 
-- FE menampilkan konteks keputusan, bukan hanya state saat ini
+## Task 7: Institutional Reporting Surface
+
+**Status: ⏳ Phase 3**
 
 ---
 
-## Task 5: Institutional Reporting Surface
+## Definition of Done untuk FE (Hackathon Scope)
 
-### Work
-
-- exportable reports
-- exposure summary
-- performance attribution
-- compliance summary per risk profile
-
-### Done when
-
-- FE bisa dipakai sebagai operator console dan reporting surface
-
----
-
-## Definition of Done for FE
-
-FE dianggap siap untuk fase berikutnya jika:
-
-- automated tests dasar sudah ada
-- komposisi komponen utama lebih rapi
-- reasoning output AI bisa ditampilkan jelas
-- manual testing checklist tetap relevan dan mudah dijalankan
+- ✅ wallet flow lengkap dari connect → auto create vault → dashboard
+- ✅ multi-wallet switch tidak error
+- ✅ deposit, withdraw, faucet berfungsi
+- ✅ agent feed menampilkan reasoning text dari AI
+- ✅ live APY dari real market data terlihat di topology
+- ✅ decision history terupdate setelah orchestrator execute

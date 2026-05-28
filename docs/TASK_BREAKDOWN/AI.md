@@ -13,18 +13,22 @@ Menetapkan jalur AI Equinox yang ringan dan pragmatis:
 
 ## Current State
 
-### Sudah diputuskan
+### Sudah diputuskan dan diimplementasi
 
-- folder `ai/` terpisah dihapus
-- strategy calculation tetap di backend
-- AI provider akan dipanggil dari backend
-- provider yang diincar saat ini adalah `OpenRouter`
-
-### Artinya
-
-- tidak ada lagi HTTP boundary `BE <-> Python AI service`
-- tidak ada lagi kebutuhan deploy service AI tersendiri
+- folder `ai/` terpisah dihapus sejak awal
+- strategy calculation tetap di backend (`strategy.ts`)
+- OpenRouter dipanggil dari backend (`reasoning.ts`)
+- tidak ada HTTP boundary BE <-> Python AI service
+- tidak ada kebutuhan deploy service AI tersendiri
 - reasoning menjadi sub-layer di backend, bukan subsystem terpisah
+
+### Yang sudah live
+
+- `reasoning.ts`: client OpenRouter dengan prompt engineering, parsing response, dan fallback
+- `strategy.ts`: kalkulasi target weights deterministic dari risk profile
+- Reasoning text dikirim ke FE via on-chain `detailsURI`
+- FE menampilkan reasoning text langsung di agent decision feed
+- API key `OPENROUTER_API_KEY` dikonfigurasi, model `openai/gpt-4o-mini`
 
 ---
 
@@ -32,92 +36,96 @@ Menetapkan jalur AI Equinox yang ringan dan pragmatis:
 
 ## Task 1: Define Reasoning Scope
 
-### Work
+**Status: ✅ DONE**
 
-- tetapkan bahwa provider hanya menghasilkan:
-  - narrative explanation
-  - confidence summary
-  - short risk commentary
-- tetapkan bahwa provider tidak menjadi sumber angka target final
+### Boundary yang sudah ditetapkan
 
-### Done when
+Provider hanya menghasilkan:
+- narrative explanation (max 180 kata)
+- confidence score (0-100)
 
-- boundary AI tidak ambigu
+Provider tidak menjadi sumber target weights — itu tetap dari `strategy.ts` secara deterministic.
 
 ---
 
 ## Task 2: Prompt and Output Contract
 
-### Work
+**Status: ✅ DONE**
 
-- definisikan input context:
-  - current vault state
-  - market snapshots
-  - chosen targets dari backend
-  - current risk profile
-- definisikan output schema:
-  - headline
-  - details
-  - confidence
-  - evidence summary
+### Input context yang dikirim ke OpenRouter
 
-### Done when
+- vault address (dipendek)
+- risk profile (Conservative/Balanced/Aggressive)
+- total portfolio value
+- per-asset: current weight % → target weight %, APY, venue
+- max allocation drift %
 
-- backend bisa mem-parse reasoning secara stabil
+### Output yang dihasilkan
+
+- `text`: narasi natural language penjelasan keputusan rebalance
+- `confidence`: integer 0-100
+- `payload`: full context + model + timestamp (di-hash untuk on-chain)
 
 ---
 
 ## Task 3: Fallback and Safety Rules
 
-### Work
+**Status: ✅ DONE**
 
-- reasoning provider failure tidak boleh memblok execution engine sepenuhnya
-- tentukan fallback copy saat provider timeout atau invalid output
-- tetapkan logging untuk prompt/input/output ringkas
+### Fallback behavior
 
-### Done when
+- jika `OPENROUTER_API_KEY` tidak di-set → fallback deterministik otomatis
+- jika request timeout (8 detik) → fallback deterministik
+- jika response tidak valid → fallback deterministik
+- fallback menghasilkan teks yang bermakna (bukan error string)
+- orchestrator tidak berhenti karena reasoning gagal
 
-- system tetap stabil walau provider LLM gagal
+---
+
+## Task 4: Richer Explainability
+
+**Status: ✅ DONE**
+
+### Apa yang sudah ada
+
+- reasoning text langsung ditampilkan di FE agent feed (bukan hash mentah)
+- teks dari OpenRouter/fallback tersimpan on-chain via `detailsURI`
+- FE `buildDecisionFeed` menampilkan `decision.detailsURI` jika ada
+- untuk blocked decision: teks reasoning juga dicatat on-chain
+
+---
+
+## Task 5: Real Data Context untuk Reasoning
+
+**Status: ✅ DONE (bonus)**
+
+### Apa yang sudah ada
+
+Prompt ke OpenRouter memakai data APY nyata:
+- USDY APY dari US Treasury T-Bill rate
+- mETH APY dari DeFiLlama
+- fBTC APY dari Bybit Flexible Savings
+- MI4 APY dari Mantle DeFi pools median
+
+Ini membuat reasoning dari LLM lebih akurat dan dapat diverifikasi.
 
 ---
 
 ## P2: Product-Level Reasoning
 
-## Task 4: Richer Explainability
+## Task 6: Confidence Layer
 
-### Work
+**Status: ⏳ Phase 2**
 
-- buat explanation lebih kaya
-- tambahkan evidence yang mudah ditampilkan FE
-- tambahkan blocked-decision commentary yang konsisten
-
-### Done when
-
-- FE bisa menunjukkan alasan keputusan dengan jelas
+Saat ini confidence score dihasilkan tapi belum ditampilkan di FE secara eksplisit. Phase 2: tampilkan confidence indicator di setiap decision entry, dengan label `clear` / `cautious` / `manual review`.
 
 ---
 
-## Task 5: Confidence Layer
+## Definition of Done untuk AI (Hackathon Scope)
 
-### Work
-
-- gunakan model output untuk confidence commentary
-- pertimbangkan kapan hasil diberi label:
-  - `clear`
-  - `cautious`
-  - `manual review`
-
-### Done when
-
-- reasoning terasa lebih operasional, bukan sekadar teks cantik
-
----
-
-## Definition of Done for AI
-
-AI dianggap siap ke fase berikutnya jika:
-
-- `OpenRouter` integration ada di backend
-- output reasoning stabil dan ter-parse
-- strategy logic utama tetap deterministic di backend
-- FE bisa mengonsumsi reasoning tanpa ketergantungan pada service Python terpisah
+- ✅ OpenRouter integration di backend
+- ✅ Output reasoning stabil dan ter-parse
+- ✅ Strategy logic tetap deterministic di backend
+- ✅ FE menampilkan reasoning text dari LLM
+- ✅ Fallback safety: sistem tetap jalan walau provider gagal
+- ✅ Real market data sebagai context untuk reasoning

@@ -16,6 +16,7 @@ import { generateReasoning } from "./reasoning.js";
 import { refreshMarketData } from "./market-sim.js";
 
 let orchestratorTimer: ReturnType<typeof setInterval> | null = null;
+let cycleRunning = false;
 
 async function getAllVaults(): Promise<Address[]> {
   const factory = contractAddresses.vaultFactory;
@@ -115,25 +116,35 @@ async function runVaultCycle(vaultAddress: Address): Promise<void> {
 }
 
 async function runCycle(): Promise<void> {
-  logEvent("info", "orchestrator_cycle_start", {});
-
-  let vaults: Address[];
-  try {
-    vaults = await getAllVaults();
-  } catch (error) {
-    logEvent("warn", "orchestrator_vault_list_error", { error: String(error) });
+  if (cycleRunning) {
+    logEvent("warn", "orchestrator_cycle_skipped", { reason: "previous cycle still running" });
     return;
   }
 
-  logEvent("info", "orchestrator_vaults_found", { count: vaults.length });
+  cycleRunning = true;
+  logEvent("info", "orchestrator_cycle_start", {});
 
-  await refreshMarketData();
+  try {
+    let vaults: Address[];
+    try {
+      vaults = await getAllVaults();
+    } catch (error) {
+      logEvent("warn", "orchestrator_vault_list_error", { error: String(error) });
+      return;
+    }
 
-  for (const vault of vaults) {
-    await runVaultCycle(vault);
+    logEvent("info", "orchestrator_vaults_found", { count: vaults.length });
+
+    await refreshMarketData();
+
+    for (const vault of vaults) {
+      await runVaultCycle(vault);
+    }
+
+    logEvent("info", "orchestrator_cycle_done", { count: vaults.length });
+  } finally {
+    cycleRunning = false;
   }
-
-  logEvent("info", "orchestrator_cycle_done", { count: vaults.length });
 }
 
 export function startOrchestrator(): void {

@@ -118,6 +118,25 @@ interface PreviewResult {
 const tokenMetadataCache = new Map<string, Promise<{ name: string; symbol: string; decimals: number }>>();
 const zeroAddress = "0x0000000000000000000000000000000000000000" as Address;
 
+// ─── Nonce manager ────────────────────────────────────────────────────────────
+// Tracks pending nonce locally so sequential writes within a cycle don't
+// re-fetch from "latest" (confirmed-only) and collide on the same nonce.
+let _nonce: number | null = null;
+
+async function freshNonce(): Promise<number> {
+  if (_nonce === null) {
+    _nonce = await publicClient.getTransactionCount({
+      address: operatorAccount.address,
+      blockTag: "pending",
+    });
+  }
+  return _nonce++;
+}
+
+function resetNonce(): void {
+  _nonce = null;
+}
+
 function addressEq(left: string, right: string) {
   return left.toLowerCase() === right.toLowerCase();
 }
@@ -350,7 +369,16 @@ async function writeContractAndWait(parameters: {
     args: parameters.args,
   });
 
-  const hash = await walletClient.writeContract(request);
+  const nonce = await freshNonce();
+  let hash: `0x${string}`;
+  try {
+    hash = await walletClient.writeContract({ ...request, nonce });
+  } catch (error) {
+    // Nonce may be wrong — force re-fetch from chain on the next call
+    resetNonce();
+    throw error;
+  }
+
   const receipt = await publicClient.waitForTransactionReceipt({
     hash,
     confirmations: env.TX_CONFIRMATIONS,

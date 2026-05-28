@@ -356,7 +356,7 @@ export function HistoryPage({ entries }: { entries: FeedEntry[] }) {
               const color = e.kind === 'guard' ? 'var(--negative)' : e.kind === 'bridge' ? 'var(--info)' : 'var(--accent)';
               return (
                 <div
-                  key={e._key || i}
+                  key={e._key != null ? `feed-${e._key}` : `idx-${i}`}
                   style={{
                     display: 'grid',
                     gridTemplateColumns: '0.8fr 1.5fr 2fr 1fr 1fr 1fr',

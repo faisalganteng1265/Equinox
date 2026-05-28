@@ -1,10 +1,23 @@
 import type { Address } from 'viem';
 
-import { RISK_PROFILES, type Agent, type Asset, type FeedEntry, type RiskProfileName, type RiskProfiles, type Venue } from './data';
-import type { AgentSnapshotResponse, ContractsResponse, PortfolioResponse, PreviewResponse } from './equinox-types';
+import {
+  RISK_PROFILES,
+  type Agent,
+  type Asset,
+  type FeedEntry,
+  type RiskProfileName,
+  type RiskProfiles,
+  type Venue,
+} from './data';
+import type {
+  AgentSnapshotResponse,
+  ContractsResponse,
+  PortfolioResponse,
+  PreviewResponse,
+} from './equinox-types';
 
 const assetMeta: Record<string, { kind: string; color: string; fallbackPrice: number }> = {
-  USDY: { kind: 'RWA · T-Bill', color: 'oklch(0.78 0.12 245)', fallbackPrice: 1 },
+  USDY: { kind: 'RWA - T-Bill', color: 'oklch(0.78 0.12 245)', fallbackPrice: 1 },
   mETH: { kind: 'Liquid Staking', color: 'oklch(0.82 0.14 165)', fallbackPrice: 3200 },
   fBTC: { kind: 'BTC Exposure', color: 'oklch(0.78 0.13 55)', fallbackPrice: 68000 },
   MI4: { kind: 'Index', color: 'oklch(0.74 0.14 295)', fallbackPrice: 100 },
@@ -26,7 +39,7 @@ export function shortHash(value: string, start = 6, end = 4) {
     return value;
   }
 
-  return `${value.slice(0, start)}…${value.slice(-end)}`;
+  return `${value.slice(0, start)}...${value.slice(-end)}`;
 }
 
 export function walletLabel(address?: string | null) {
@@ -34,7 +47,23 @@ export function walletLabel(address?: string | null) {
     return 'Not connected';
   }
 
-  return `${address.slice(0, 6)}…${address.slice(-4)}`;
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+}
+
+export function explorerUrlForTx(baseUrl: string, hash?: string | null) {
+  if (!hash) {
+    return null;
+  }
+
+  return `${baseUrl.replace(/\/$/, '')}/tx/${hash}`;
+}
+
+export function explorerUrlForAddress(baseUrl: string, address?: string | null) {
+  if (!address) {
+    return null;
+  }
+
+  return `${baseUrl.replace(/\/$/, '')}/address/${address}`;
 }
 
 export function isAddressEqual(left?: string | null, right?: string | null) {
@@ -76,6 +105,8 @@ export function buildUiVenues(portfolio: PortfolioResponse): Venue[] {
       kind: strategy.venueLabel || strategy.venueType,
       chain: 'Mantle Sepolia',
       asset: asset.symbol,
+      assetAddress: asset.address,
+      adapterAddress: strategy.address,
       apy: strategy.latestSnapshot.apyBps / 100,
       tvl: `$${Math.round(numberOrFallback(asset.assetValueFormatted, 0)).toLocaleString()}`,
       state: strategy.approved ? 'active' as const : 'available' as const,
@@ -132,16 +163,19 @@ export function buildDecisionFeed(agentSnapshot: AgentSnapshotResponse): FeedEnt
   return agentSnapshot.decisions.map((decision) => {
     const timestamp = new Date(decision.timestamp * 1000);
     const shortReasoning = shortHash(decision.reasoningHash, 10, 6);
+    const isBlocked = decision.blockedByGuardrail;
 
     return {
       _key: decision.index,
-      kind: decision.blockedByGuardrail ? 'guard' : 'rebalance',
-      title: decision.blockedByGuardrail ? 'Vault guardrail blocked a rebalance' : 'Authorized agent executed a rebalance',
+      kind: isBlocked ? 'guard' : 'rebalance',
+      title: isBlocked ? 'Vault guardrail blocked a rebalance' : 'Authorized agent committed a live rebalance',
       body: decision.detailsURI
         ? `Reasoning context: ${decision.detailsURI}`
-        : `Reasoning hash ${shortReasoning} is recorded on-chain for audit.`,
-      venue: decision.blockedByGuardrail ? 'Risk Guardrail' : 'MantleVaultOrchestrator',
-      delta: decision.blockedByGuardrail ? 'blocked' : `${Number(decision.performanceBps) / 100}% perf`,
+        : isBlocked
+          ? `Reasoning hash ${shortReasoning} is recorded on-chain for audit.`
+          : `Reasoning hash ${shortReasoning} is recorded on-chain. Performance attribution starts after funded positions accrue.`,
+      venue: isBlocked ? 'Risk Guardrail' : 'MantleVaultOrchestrator',
+      delta: isBlocked ? 'blocked' : 'live rebalance',
       tx: decision.reasoningHash,
       timestamp: timestamp.toLocaleTimeString('en-US', {
         hour: '2-digit',

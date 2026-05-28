@@ -4,51 +4,80 @@ import { ZodError } from "zod";
 export class AppError extends Error {
   public readonly statusCode: number;
   public readonly details?: unknown;
+  public readonly reason?: string;
 
-  constructor(statusCode: number, message: string, details?: unknown) {
+  constructor(statusCode: number, message: string, details?: unknown, reason?: string) {
     super(message);
     this.name = "AppError";
     this.statusCode = statusCode;
     this.details = details;
+    this.reason = reason;
   }
 }
 
-export function toErrorResponse(error: unknown) {
+function errorBody(
+  statusCode: number,
+  error: string,
+  requestId: string,
+  reason: string,
+  details?: unknown,
+) {
+  return {
+    error,
+    details,
+    reason,
+    requestId,
+    statusCode,
+  };
+}
+
+export function toErrorResponse(error: unknown, requestId = "unknown") {
   if (error instanceof AppError) {
     return {
       statusCode: error.statusCode,
-      body: {
-        error: error.message,
-        details: error.details,
-      },
+      body: errorBody(
+        error.statusCode,
+        error.message,
+        requestId,
+        error.reason ?? "app_error",
+        error.details,
+      ),
     };
   }
 
   if (error instanceof ZodError) {
     return {
       statusCode: 400,
-      body: {
-        error: "Invalid request payload",
-        details: error.flatten(),
-      },
+      body: errorBody(
+        400,
+        "Invalid request payload",
+        requestId,
+        "invalid_request_payload",
+        error.flatten(),
+      ),
     };
   }
 
   if (error instanceof BaseError) {
     return {
       statusCode: 502,
-      body: {
-        error: error.shortMessage,
-        details: error.details,
-      },
+      body: errorBody(
+        502,
+        error.shortMessage,
+        requestId,
+        "rpc_request_failed",
+        error.details,
+      ),
     };
   }
 
   return {
     statusCode: 500,
-    body: {
-      error: error instanceof Error ? error.message : "Internal Server Error",
-    },
+    body: errorBody(
+      500,
+      error instanceof Error ? error.message : "Internal Server Error",
+      requestId,
+      "internal_server_error",
+    ),
   };
 }
-

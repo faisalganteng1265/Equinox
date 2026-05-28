@@ -5,5 +5,19 @@ libs = ["lib"]
 solc_version = "0.8.23"
 optimizer = true
 optimizer_runs = 200
+gas_reports = [
+  "MantleAgentRegistry8004",
+  "MantleVaultOrchestrator",
+  "MockAssetExchange",
+  "MockIdleAdapter",
+  "MockDeFiLendingAdapter",
+  "MockCeFiEarnAdapter"
+]
+
+[invariant]
+runs = 32
+depth = 32
+fail_on_revert = false
+check_interval = 8
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

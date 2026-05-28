@@ -94,7 +94,7 @@ Dokumen ini sengaja dibuat jujur terhadap fakta lapangan. Ia membedakan dengan t
 
 ## 1.3 What does not exist yet
 
-- Python `AI / quant engine`
+- reasoning provider layer yang matang
 - Bybit API connector nyata
 - Aave / CIAN / real protocol adapters
 - scheduler / automation loop untuk strategy execution
@@ -113,7 +113,7 @@ Dokumen ini sengaja dibuat jujur terhadap fakta lapangan. Ia membedakan dengan t
 Kalau dibandingkan dengan product design awal, gap utama Equinox saat ini adalah:
 
 1. `AI engine gap`
-   Saat ini belum ada optimizer Python, risk matrix engine, atau reasoning generator sungguhan.
+   Saat ini belum ada strategy engine matang di backend, reasoning provider integration, atau confidence layer yang benar-benar operasional.
 
 2. `Cross-world execution gap`
    Visi DeFi <-> Bybit CeFi bridge belum terwujud. Yang ada masih mock adapter dan simulated route.
@@ -289,14 +289,14 @@ Mengubah Equinox dari “backend action panel” menjadi sistem yang benar-benar
 
 ### Workstreams
 
-#### AI / Quant
+#### Strategy / Reasoning
 
-- buat service `python` atau service terpisah untuk:
-  - yield curve evaluation
-  - risk scoring
-  - portfolio target generation
-  - reasoning generation
-- definisikan input/output contract yang jelas antara AI engine dan backend
+- pertahankan strategy calculation utama di backend
+- tambahkan provider reasoning seperti `OpenRouter` untuk:
+  - explanation
+  - confidence summary
+  - audit-friendly narrative
+- definisikan input/output contract reasoning yang jelas di dalam backend
 
 #### Backend Automation
 
@@ -543,7 +543,7 @@ Mengubah sistem dari `good Web3 product` menjadi `institutional-grade operating 
 - faucet / demo mint UX
 - backend scheduler design
 - data ingestion design
-- AI engine interface contract
+- reasoning provider contract
 
 ## P1: High Value
 
@@ -672,7 +672,7 @@ Kalau target berikutnya adalah membuat Equinox terlihat jauh lebih matang tanpa 
 
 - backend scheduler skeleton
 - data model for market snapshots and rebalance jobs
-- Python engine interface contract
+- OpenRouter reasoning contract and prompt shape
 
 ### Week 3
 

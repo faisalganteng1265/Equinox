@@ -6,7 +6,11 @@ import { env } from "../config/env.js";
 
 export const operatorAccount = privateKeyToAccount(env.OPERATOR_PRIVATE_KEY as Hex);
 
-const transport = http(env.MANTLE_RPC_URL);
+const transport = http(env.MANTLE_RPC_URL, {
+  timeout: env.RPC_TIMEOUT_MS,
+  retryCount: env.RPC_RETRY_COUNT,
+  retryDelay: env.RPC_RETRY_DELAY_MS,
+});
 
 export const publicClient = createPublicClient({
   chain: mantleSepolia,

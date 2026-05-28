@@ -52,6 +52,8 @@ export interface Venue {
   kind: string;
   chain: string;
   asset: string;
+  assetAddress?: string;
+  adapterAddress?: string;
   apy: number;
   tvl: string;
   state: 'active' | 'available';

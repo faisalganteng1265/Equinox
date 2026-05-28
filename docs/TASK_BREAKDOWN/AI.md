@@ -2,271 +2,122 @@
 
 ## Goal
 
-Membuat folder `ai/` dan service AI/quant Equinox yang:
+Menetapkan jalur AI Equinox yang ringan dan pragmatis:
 
-- menghasilkan target portfolio
-- menghitung risk-aware strategy output
-- membuat reasoning yang bisa diaudit
-- menyuplai backend dengan keputusan yang konsisten
+- tidak memakai service Python terpisah
+- tidak memindahkan strategy logic keluar dari backend
+- memakai `OpenRouter` hanya untuk reasoning, summarization, dan confidence
+- menjaga `BE + SC` sebagai guardrail final
 
 ---
 
 ## Current State
 
-### Faktanya sekarang
+### Sudah diputuskan
 
-- folder `ai/` belum ada
-- belum ada Python service
-- belum ada optimizer implementation
-- belum ada reasoning generator
-- belum ada contract resmi antara backend dan AI service
+- folder `ai/` terpisah dihapus
+- strategy calculation tetap di backend
+- AI provider akan dipanggil dari backend
+- provider yang diincar saat ini adalah `OpenRouter`
 
-Artinya, `AI` saat ini masih konsep arsitektur, belum modul implementasi.
+### Artinya
 
----
-
-## Proposed Folder Shape
-
-```text
-ai/
-  README.md
-  pyproject.toml
-  src/
-    app.py
-    config/
-    domain/
-    services/
-    adapters/
-    models/
-    pipelines/
-  tests/
-```
-
-### Suggested responsibilities
-
-- `domain/`
-  - yield evaluation rules
-  - risk rules
-  - allocation logic
-
-- `services/`
-  - rebalance planner
-  - reasoning generator
-  - confidence evaluator
-
-- `adapters/`
-  - market data client
-  - backend API client
-
-- `pipelines/`
-  - scheduled run
-  - one-shot simulation
+- tidak ada lagi HTTP boundary `BE <-> Python AI service`
+- tidak ada lagi kebutuhan deploy service AI tersendiri
+- reasoning menjadi sub-layer di backend, bukan subsystem terpisah
 
 ---
 
-## P0: Define the Service Boundary
+## P1: Reasoning Integration
 
-## Task 1: Create the `ai/` Folder and Project Skeleton
+## Task 1: Define Reasoning Scope
 
 ### Work
 
-- buat folder `ai/`
-- pilih packaging Python
-- tambahkan README dasar
-- tetapkan command local run and test
+- tetapkan bahwa provider hanya menghasilkan:
+  - narrative explanation
+  - confidence summary
+  - short risk commentary
+- tetapkan bahwa provider tidak menjadi sumber angka target final
 
 ### Done when
 
-- service punya bentuk project yang jelas
+- boundary AI tidak ambigu
 
 ---
 
-## Task 2: Define BE <-> AI Contract
+## Task 2: Prompt and Output Contract
 
 ### Work
 
-- tentukan payload input:
-  - portfolio state
-  - asset metadata
-  - adapter snapshots
-  - prices
+- definisikan input context:
+  - current vault state
+  - market snapshots
+  - chosen targets dari backend
   - current risk profile
-- tentukan payload output:
-  - proposed targets
-  - reasoning payload
+- definisikan output schema:
+  - headline
+  - details
   - confidence
-  - risk summary
-  - execution recommendation
+  - evidence summary
 
 ### Done when
 
-- backend bisa memanggil AI service lewat contract yang stabil
+- backend bisa mem-parse reasoning secara stabil
 
 ---
 
-## Task 3: Reasoning Payload Design
+## Task 3: Fallback and Safety Rules
 
 ### Work
 
-- tentukan format reasoning terstruktur
-- pisahkan:
-  - human-readable explanation
-  - machine-readable evidence
-  - source references
+- reasoning provider failure tidak boleh memblok execution engine sepenuhnya
+- tentukan fallback copy saat provider timeout atau invalid output
+- tetapkan logging untuk prompt/input/output ringkas
 
 ### Done when
 
-- reasoning hash on-chain punya payload off-chain yang berguna dan konsisten
+- system tetap stabil walau provider LLM gagal
 
 ---
 
-## P1: First Working Engine
+## P2: Product-Level Reasoning
 
-## Task 4: Rule-Based Rebalance Planner MVP
-
-### Why
-
-Jangan langsung lompat ke AI yang rumit. Mulai dari engine deterministic yang bisa diaudit.
+## Task 4: Richer Explainability
 
 ### Work
 
-- implement planner sederhana:
-  - bandingkan APY
-  - cek risk score
-  - cek liquidity score
-  - hasilkan target allocation berdasarkan profile
+- buat explanation lebih kaya
+- tambahkan evidence yang mudah ditampilkan FE
+- tambahkan blocked-decision commentary yang konsisten
 
 ### Done when
 
-- engine bisa menghasilkan target yang konsisten dari input snapshot
+- FE bisa menunjukkan alasan keputusan dengan jelas
 
 ---
 
-## Task 5: Risk Matrix Controller MVP
+## Task 5: Confidence Layer
 
 ### Work
 
-- definisikan scoring logic
-- buat rule untuk:
-  - APY attractiveness
-  - liquidity penalty
-  - risk penalty
-  - volatility penalty
+- gunakan model output untuk confidence commentary
+- pertimbangkan kapan hasil diberi label:
+  - `clear`
+  - `cautious`
+  - `manual review`
 
 ### Done when
 
-- planner tidak hanya mengejar APY mentah
-
----
-
-## Task 6: Reasoning Generator MVP
-
-### Work
-
-- konversi output planner menjadi teks penjelasan yang masuk akal
-- sertakan evidence ringkas:
-  - old allocation
-  - new allocation
-  - source metrics
-
-### Done when
-
-- setiap keputusan punya narasi yang cukup untuk FE dan audit log
-
----
-
-## P2: Production-Like AI Layer
-
-## Task 7: Real Market Data Integration
-
-### Work
-
-- baca data real dari source yang dipilih
-- normalisasi ke schema internal
-- scoring berdasarkan data nyata, bukan manual snapshot saja
-
-### Done when
-
-- AI engine bisa berjalan di atas data real
-
----
-
-## Task 8: Simulation and Backtesting
-
-### Work
-
-- buat mode replay/backtest
-- evaluasi keputusan engine terhadap historical snapshots
-- ukur:
-  - return
-  - drawdown
-  - decision frequency
-  - blocked decision rate
-
-### Done when
-
-- engine tidak hanya "terdengar masuk akal", tapi juga terukur
-
----
-
-## Task 9: Confidence and Safety Layer
-
-### Work
-
-- tambahkan confidence score
-- jika confidence rendah, hasilkan `hold` atau `manual review`
-- tentukan kapan AI tidak boleh menyarankan execute
-
-### Done when
-
-- AI tidak memaksa action di kondisi yang tidak pasti
-
----
-
-## P3: Institutional Path
-
-## Task 10: Explainability and Audit Package
-
-### Work
-
-- simpan full reasoning artifacts
-- simpan source trace
-- siapkan exportable decision packets
-
-### Done when
-
-- setiap keputusan dapat diaudit oleh pihak internal atau eksternal
-
----
-
-## Task 11: Model Governance
-
-### Work
-
-- versioning strategy logic
-- approval flow untuk perubahan model/rule
-- changelog antar engine version
-
-### Done when
-
-- perubahan AI logic tidak liar dan bisa ditelusuri
-
----
-
-## Dependencies
-
-- `BE` wajib mendefinisikan integration contract
-- `SC` memberikan execution envelope dan guardrail semantics
-- `FE` akan mengkonsumsi reasoning output dan confidence data
+- reasoning terasa lebih operasional, bukan sekadar teks cantik
 
 ---
 
 ## Definition of Done for AI
 
-AI dianggap `done` untuk fase berikutnya jika:
+AI dianggap siap ke fase berikutnya jika:
 
-- ada folder service nyata
-- input/output contract stabil
-- planner MVP jalan
-- reasoning generator jalan
-- backend bisa memakai output AI untuk preview and execute loop
+- `OpenRouter` integration ada di backend
+- output reasoning stabil dan ter-parse
+- strategy logic utama tetap deterministic di backend
+- FE bisa mengonsumsi reasoning tanpa ketergantungan pada service Python terpisah

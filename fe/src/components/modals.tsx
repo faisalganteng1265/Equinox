@@ -84,7 +84,7 @@ function StepBar({ step }: { step: 1 | 2 | 3 }) {
               fontWeight: 600,
             }}
           >
-            {step > value ? '✓' : value}
+            {step > value ? 'OK' : value}
           </div>
           <span style={{ fontSize: 12, color: step >= value ? 'var(--text)' : 'var(--text-dim)' }}>
             {value === 1 ? 'Configure' : value === 2 ? 'Review' : 'Submit'}
@@ -223,7 +223,7 @@ export function VaultActionModal({
 
     if (mode === 'deposit' && profileCodes[profile] !== portfolio.vault.currentRiskProfileCode) {
       plan.push({
-        label: `Set risk profile → ${profile}`,
+        label: `Set risk profile -> ${profile}`,
         to: vaultAddress,
         data: encodeFunctionData({
           abi: vaultAbi,
@@ -388,7 +388,7 @@ export function VaultActionModal({
 
     try {
       if (mode === 'deposit' && profileCodes[profile] !== portfolio.vault.currentRiskProfileCode) {
-        await writeAndWait(`Set risk profile → ${profile}`, {
+        await writeAndWait(`Set risk profile -> ${profile}`, {
           address: vaultAddress,
           abi: vaultAbi,
           functionName: 'setRiskProfile',
@@ -470,7 +470,7 @@ export function VaultActionModal({
             <select value={assetKey} onChange={(event) => setAssetKey(event.target.value)} style={{ width: '100%', background: 'var(--surface-2)' }}>
               {portfolio.assets.map((asset) => (
                 <option key={asset.key} value={asset.key}>
-                  {asset.symbol} · {asset.displayName}
+                  {asset.symbol} | {asset.displayName}
                 </option>
               ))}
             </select>
@@ -566,7 +566,7 @@ export function VaultActionModal({
                 <Row key={tx.label} label={`  ${tx.label}`} value="ready" small />
               ))}
               <div className="divider" style={{ margin: '10px 0' }} />
-              <Row label="Mantle gas estimate" value={estimatingGas ? 'estimating…' : gasEstimate ? `${Number(gasEstimate.totalGasCostEth).toFixed(6)} MNT` : 'unavailable'} />
+              <Row label="Mantle gas estimate" value={estimatingGas ? 'estimating...' : gasEstimate ? `${Number(gasEstimate.totalGasCostEth).toFixed(6)} MNT` : 'unavailable'} />
               <Row label="Network" value="Mantle Sepolia" />
             </div>
             {error ? (
@@ -576,7 +576,7 @@ export function VaultActionModal({
             ) : null}
           </div>
           <div style={{ padding: '14px 22px', borderTop: '1px solid var(--border-soft)', display: 'flex', justifyContent: 'space-between' }}>
-            <button className="btn btn-ghost" onClick={() => setStep(1)} type="button">← Back</button>
+            <button className="btn btn-ghost" onClick={() => setStep(1)} type="button">&lt;- Back</button>
             <button className="btn btn-primary" onClick={executeAction} type="button" disabled={submitting}>
               {submitting ? 'Submitting...' : mode === 'deposit' ? 'Sign and deposit' : 'Sign and withdraw'}
             </button>
@@ -609,25 +609,25 @@ export function VaultActionModal({
             </div>
 
             {txStatuses.length === 0 ? (
-              <StatusNotice tone="info">Waiting for the first wallet signature…</StatusNotice>
+              <StatusNotice tone="info">Waiting for the first wallet signature...</StatusNotice>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 12, color: 'var(--text-mute)', fontFamily: 'var(--font-mono)' }}>
                 {txStatuses.map((tx) => (
                   <div key={`${tx.label}-${tx.hash || tx.status}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ color: tx.status === 'confirmed' ? 'var(--positive)' : tx.status === 'failed' ? 'var(--negative)' : 'var(--warning)' }}>
-                      {tx.status === 'confirmed' ? '✓' : tx.status === 'failed' ? '×' : '•'}
+                      {tx.status === 'confirmed' ? 'OK' : tx.status === 'failed' ? 'X' : '...'}
                     </span>
                     <span style={{ color: tx.status === 'failed' ? 'var(--negative)' : 'var(--text)' }}>
                       {tx.label}
                       {tx.explorerUrl && tx.hash ? (
                         <>
-                          {' · '}
+                          {' | '}
                           <a href={tx.explorerUrl} target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>
                             {tx.hash.slice(0, 10)}... <Icon name="external" size={10} />
                           </a>
                         </>
-                      ) : tx.hash ? ` · ${tx.hash.slice(0, 10)}...` : ''}
-                      {tx.blockNumber ? ` · block ${tx.blockNumber}` : tx.status === 'pending' ? ' · pending…' : ''}
+                      ) : tx.hash ? ` | ${tx.hash.slice(0, 10)}...` : ''}
+                      {tx.blockNumber ? ` | block ${tx.blockNumber}` : tx.status === 'pending' ? ' | pending...' : ''}
                     </span>
                   </div>
                 ))}
@@ -641,7 +641,7 @@ export function VaultActionModal({
             ) : null}
             {!submitting && !error ? (
               <div style={{ marginTop: 16 }}>
-                <StatusNotice tone="ok">All transactions confirmed. Refreshing dashboard state…</StatusNotice>
+                <StatusNotice tone="ok">All transactions confirmed. Refreshing dashboard state...</StatusNotice>
               </div>
             ) : null}
           </div>
@@ -767,7 +767,7 @@ export function FaucetModal({
             <select value={assetKey} onChange={(event) => setAssetKey(event.target.value)} style={{ width: '100%', background: 'var(--surface-2)' }}>
               {portfolio.assets.map((asset) => (
                 <option key={asset.key} value={asset.key}>
-                  {asset.symbol} · {asset.displayName}
+                  {asset.symbol} | {asset.displayName}
                 </option>
               ))}
             </select>
@@ -814,7 +814,7 @@ export function FaucetModal({
             type="button"
             disabled={minting || !isOwner || !amount || Number(amount) <= 0}
           >
-            <Icon name="plus" size={13} /> {minting ? 'Minting…' : 'Mint'}
+            <Icon name="plus" size={13} /> {minting ? 'Minting...' : 'Mint'}
           </button>
         )}
       </div>
@@ -865,7 +865,7 @@ export function RiskShieldModal({ onClose, attempted, profile, profiles }: {
           <CodeRow k="proposed" v={`${attempted.asset} ${(attempted.weight * 100).toFixed(1)}%`} bad />
           <CodeRow k="profile.max" v={`${attempted.asset} ${(cap * 100).toFixed(0)}%`} />
           <CodeRow k="error" v={`RiskProfileGuard: cap exceeded by ${((attempted.weight - cap) * 100).toFixed(1)}%`} bad />
-          <CodeRow k="action" v="execution rejected · funds untouched" ok />
+          <CodeRow k="action" v="execution rejected | funds untouched" ok />
         </div>
         <p style={{ fontSize: 12, color: 'var(--text-mute)', lineHeight: 1.6, marginTop: 14 }}>
           The rejected decision can still be logged on-chain through the backend so the agent history remains auditable.

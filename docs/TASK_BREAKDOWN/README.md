@@ -1,82 +1,79 @@
 # Equinox Task Breakdown
 
-Dokumen ini memecah roadmap Equinox menjadi task breakdown yang bisa dieksekusi per folder:
+Dokumen ini memecah roadmap Equinox menjadi task breakdown per area utama:
 
 - [FE.md](C:/Users/bagas/Downloads/Dapp%20Project/Equinox/docs/TASK_BREAKDOWN/FE.md)
 - [BE.md](C:/Users/bagas/Downloads/Dapp%20Project/Equinox/docs/TASK_BREAKDOWN/BE.md)
 - [SC.md](C:/Users/bagas/Downloads/Dapp%20Project/Equinox/docs/TASK_BREAKDOWN/SC.md)
 - [AI.md](C:/Users/bagas/Downloads/Dapp%20Project/Equinox/docs/TASK_BREAKDOWN/AI.md)
 
-Dokumen ini adalah turunan yang lebih operasional dari [ROADMAP_GAP_TO_FINAL.md](C:/Users/bagas/Downloads/Dapp%20Project/Equinox/docs/ROADMAP_GAP_TO_FINAL.md).
+Ini adalah breakdown operasional dari [ROADMAP_GAP_TO_FINAL.md](C:/Users/bagas/Downloads/Dapp%20Project/Equinox/docs/ROADMAP_GAP_TO_FINAL.md).
 
 ---
 
-## Cara Pakai
-
-1. Mulai dari file folder yang sedang dikerjakan.
-2. Kerjakan `P0` lebih dulu.
-3. Jangan naik ke `P1` atau `P2` sebelum `Definition of Done` untuk `P0` terpenuhi.
-4. Gunakan bagian `Dependencies` untuk tahu task mana yang memblokir task lain.
-5. Setelah satu blok selesai, update status di dokumen ini atau pindahkan ke issue tracker.
-
----
-
-## Status Repo Saat Ini
+## Repo Status Sekarang
 
 ### FE
 
-- sudah wired ke `BE` dan `SC`
-- wallet connect sudah pakai `RainbowKit`
-- deposit/withdraw sudah ada
-- preview/execute/reject sudah ada
-- butuh polish, faucet UX, testing, dan explorer UX
+- wallet flow, faucet, deposit, withdraw, preview, execute, dan reject sudah hidup
+- explorer deep link sudah menyentuh tx, registry, asset, dan adapter surfaces
+- responsive pass dasar sudah beres
+- checklist manual ada di [FE_MANUAL_TEST_CHECKLIST.md](C:/Users/bagas/Downloads/Dapp%20Project/Equinox/docs/FE_MANUAL_TEST_CHECKLIST.md)
 
 ### BE
 
-- sudah bisa baca state live
-- sudah bisa operator write action
-- belum ada scheduler
-- belum ada database/persistence
-- belum ada automated strategy loop
-- belum ada test suite formal
+- env validation sudah fail-fast
+- error contract sudah stabil dengan `reason` machine-readable
+- request correlation dan structured logging sudah ada
+- retry/timeout RPC dasar sudah ada
+- smoke test backend sudah ada
+- strategy logic tetap berada di backend
 
 ### SC
 
-- sudah deploy di `Mantle Sepolia`
-- mock ecosystem sudah hidup
-- risk guardrails dan agent logging sudah nyata
-- belum ada adapter produksi
-- belum ada audit hardening penuh
+- fuzz test sudah bertambah
+- invariant suite sudah hidup
+- gas report baseline sudah ada
+- deployment export artifact sudah ada
 
-### AI
+### AI / Reasoning
 
-- belum ada folder implementasi
-- belum ada Python engine
-- baru ada kebutuhan arsitektural di product design dan roadmap
+- tidak ada lagi service Python terpisah
+- arah terbaru adalah `OpenRouter` untuk reasoning only
+- strategy calculation tetap berada di backend
+- reasoning nantinya dihasilkan dari backend melalui provider LLM, bukan service `ai/` terpisah
 
 ---
 
-## Critical Sequence
+## P0 Status
 
-Urutan kerja paling rasional dari kondisi saat ini:
+- `FE P0`: selesai
+- `BE P0`: selesai
+- `SC P0`: selesai
+- `AI architecture decision P0`: selesai
 
-1. `FE P0`
-   Tujuannya: demo dan testing flow jadi mulus.
+Artinya, Equinox sekarang sudah melewati fase wiring awal dan masuk ke fase `P1 execution`.
 
-2. `BE P0`
-   Tujuannya: backend stabil, auth rapi, logging rapi, data contract stabil.
+---
 
-3. `AI P0`
-   Tujuannya: definisikan service shape, contract, dan data flow.
+## Next Critical Sequence
 
-4. `BE P1 + AI P1`
-   Tujuannya: hidupkan automation loop dan reasoning pipeline.
+Urutan paling rasional setelah semua `P0` ditutup:
 
-5. `SC P0/P1`
-   Tujuannya: harden mock execution, tambah test depth, rapikan read helpers.
+1. `BE P1`
+   Tujuannya: split domain modules, persistence, scheduler, dan strategy loop.
 
-6. `SC P2 + BE P2 + AI P2`
-   Tujuannya: bergerak ke adapter nyata, real data ops, dan mainnet readiness.
+2. `Reasoning P1`
+   Tujuannya: tambahkan `OpenRouter` reasoning layer di backend tanpa memindahkan strategy logic keluar dari `BE`.
+
+3. `FE P1`
+   Tujuannya: refactor page composition, tambah automated FE testing, dan siapkan surface reasoning yang lebih kaya.
+
+4. `SC P1`
+   Tujuannya: read helper yang lebih ramah FE/BE, audit-prep docs, dan review interface adapter untuk venue nyata.
+
+5. `BE P2 + SC P2`
+   Tujuannya: real market data, protocol integration path, emergency/admin hardening, dan mainnet readiness.
 
 ---
 
@@ -84,83 +81,27 @@ Urutan kerja paling rasional dari kondisi saat ini:
 
 ### Aman diparalelkan
 
-- `FE P0` dan `SC P0`
-- `BE P0` dan `SC P0`
-- `AI P0` dan `BE P0`
+- `FE P1` dan `BE P1`
+- `SC P1` dan `BE P1`
+- `Reasoning P1` dan `FE P1`
 
-### Jangan diparalelkan tanpa sinkronisasi kuat
+### Butuh sinkronisasi ketat
 
-- perubahan shape response `BE` sambil FE sedang wiring besar
-- perubahan ABI / contract method `SC` saat FE write flow belum stabil
-- automation logic `BE` sebelum contract risk semantics benar-benar final
-
----
-
-## Folder Ownership Suggestion
-
-### `fe/`
-
-Fokus pada:
-
-- user experience
-- wallet flow
-- dashboard state
-- explorer and tx visibility
-- manual and E2E testability
-
-### `be/`
-
-Fokus pada:
-
-- orchestration
-- read/write contract interface
-- auth
-- automation scheduler
-- data persistence
-- integrations
-
-### `sc/`
-
-Fokus pada:
-
-- custody and guardrails
-- adapter interface
-- on-chain invariants
-- security hardening
-- deployment discipline
-
-### `ai/`
-
-Fokus pada:
-
-- yield evaluation
-- risk scoring
-- target generation
-- reasoning generation
-- explainability payloads
+- perubahan shape response `BE` sambil FE membangun automated tests
+- perubahan prompt/response reasoning saat FE mulai menampilkan explainability surface
+- perubahan ABI atau helper view `SC` saat FE/BE sedang mengunci contract read path
 
 ---
 
 ## Suggested Milestone Labels
 
-Gunakan label ini kalau ingin memecah menjadi issue atau task board:
-
 - `M0-demo-stability`
-- `M1-backend-hardening`
-- `M2-ai-service-foundation`
-- `M3-automation-loop`
-- `M4-real-data-snapshots`
-- `M5-protocol-integration`
-- `M6-mainnet-readiness`
-- `M7-institutional-controls`
-
----
-
-## Success Condition
-
-Task breakdown ini dianggap berhasil dipakai kalau:
-
-- setiap folder punya task order yang jelas
-- tidak ada kebingungan "habis ini ngerjain apa"
-- blocker lintas folder terlihat lebih awal
-- tim bisa mengeksekusi per folder tanpa harus membaca roadmap besar berulang-ulang
+- `M1-p0-complete`
+- `M2-backend-foundation`
+- `M3-openrouter-reasoning`
+- `M4-automation-loop`
+- `M5-real-data-snapshots`
+- `M6-smart-contract-audit-prep`
+- `M7-protocol-integration`
+- `M8-mainnet-readiness`
+- `M9-institutional-controls`

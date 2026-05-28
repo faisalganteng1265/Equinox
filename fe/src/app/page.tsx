@@ -14,7 +14,6 @@ import { WalletButton } from '@/components/wallet-button';
 import { TweaksPanel, TweakColor, TweakRadio, TweakSection, TweakSelect, useTweaks } from '@/components/tweaks-panel';
 import { equinoxApi } from '@/lib/equinox-api';
 import {
-  assetAddressForKey,
   buildBlockedTargets,
   buildDecisionFeed,
   buildPreviewFeed,
@@ -23,6 +22,7 @@ import {
   buildRiskProfilesFromPortfolio,
   buildUiAssets,
   buildUiVenues,
+  walletLabel,
 } from '@/lib/equinox-ui';
 import { RISK_PROFILES, buildSparkSeries, nowStamp, type FeedEntry, type RiskProfileName } from '@/lib/data';
 
@@ -248,7 +248,7 @@ export default function AppV2() {
       addLocalFeed({
         kind: 'guard',
         title: 'Blocked decision recorded on-chain',
-        body: `Rejected decision logged with reasoning hash ${result.reasoningHash.slice(0, 10)}…`,
+        body: `Rejected decision logged with reasoning hash ${result.reasoningHash.slice(0, 10)}...`,
         venue: 'Risk Guardrail',
         delta: 'blocked',
         tx: result.receipt.transactionHash,
@@ -314,7 +314,7 @@ export default function AppV2() {
       addLocalFeed({
         kind: 'rebalance',
         title: `${profile} targets executed`,
-        body: `Authorized backend agent executed a rebalance and wrote tx ${result.receipt.transactionHash.slice(0, 10)}… on Mantle.`,
+        body: `Authorized backend agent executed a rebalance and wrote tx ${result.receipt.transactionHash.slice(0, 10)}... on Mantle.`,
         venue: 'Backend agent',
         delta: `${result.preview.totalWeightBps / 100}% target`,
         tx: result.receipt.transactionHash,
@@ -410,7 +410,7 @@ export default function AppV2() {
                 <div>
                   <h2>Positions, by class</h2>
                   <div className="eyebrow" style={{ marginTop: 8 }}>
-                    {assets.length} assets · weighted APY {weightedApy.toFixed(2)}%
+                    {assets.length} assets | weighted APY {weightedApy.toFixed(2)}%
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
@@ -423,9 +423,9 @@ export default function AppV2() {
                 </div>
               </div>
               {refreshError ? <InlineStatus tone="error">{refreshError}</InlineStatus> : null}
-              {portfolioQuery.isFetching && !refreshing ? <InlineStatus tone="info">Refreshing vault balances and adapter snapshots…</InlineStatus> : null}
+              {portfolioQuery.isFetching && !refreshing ? <InlineStatus tone="info">Refreshing vault balances and adapter snapshots...</InlineStatus> : null}
               {assets.length > 0 ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 14 }}>
+                <div className="asset-grid">
                   {assets.map((asset) => (
                     <BottleCard key={asset.id} asset={asset} />
                   ))}
@@ -435,13 +435,13 @@ export default function AppV2() {
               )}
             </section>
 
-            <section className="section" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.55fr) 360px', gap: 32 }}>
+            <section className="section reason-grid">
               <div>
                 <div className="section-head" style={{ marginBottom: 24 }}>
                   <div>
                     <h2>Agent reasoning</h2>
                     <div className="eyebrow" style={{ marginTop: 8 }}>
-                      Streaming · {personality === 'terminal' ? 'telemetry' : 'analyst memo'} · ERC-8004 logged
+                      Streaming | {personality === 'terminal' ? 'telemetry' : 'analyst memo'} | ERC-8004 logged
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
@@ -449,13 +449,13 @@ export default function AppV2() {
                       <Icon name={paused ? 'play' : 'pause'} size={12} /> {paused ? 'Resume' : 'Pause'}
                     </button>
                     <button className="btn btn-sm btn-outline" onClick={() => void previewCurrentPlan()} type="button" disabled={actionBusy !== null}>
-                      {actionBusy === 'preview' ? 'Previewing…' : 'Preview plan'}
+                      {actionBusy === 'preview' ? 'Previewing...' : 'Preview plan'}
                     </button>
                     <button className="btn btn-sm btn-outline" onClick={() => void executeCurrentPlan()} type="button" disabled={actionBusy !== null}>
-                      {actionBusy === 'execute' ? 'Executing…' : 'Execute plan'}
+                      {actionBusy === 'execute' ? 'Executing...' : 'Execute plan'}
                     </button>
                     <button className="btn btn-sm btn-outline" onClick={() => void triggerShield()} type="button" disabled={actionBusy !== null}>
-                      <Icon name="shield" size={12} color="var(--negative)" /> {actionBusy === 'reject' ? 'Recording…' : 'Record blocked'}
+                      <Icon name="shield" size={12} color="var(--negative)" /> {actionBusy === 'reject' ? 'Recording...' : 'Record blocked'}
                     </button>
                   </div>
                 </div>
@@ -463,7 +463,7 @@ export default function AppV2() {
                   <InlineStatus tone="error">{actionError}</InlineStatus>
                 ) : null}
                 {agentQuery.isFetching && !actionBusy ? (
-                  <InlineStatus tone="info">Syncing latest agent decision log…</InlineStatus>
+                  <InlineStatus tone="info">Syncing latest agent decision log...</InlineStatus>
                 ) : null}
                 <AgentMemoStream entries={deferredFeed} personality={personality} limit={5} />
               </div>
@@ -486,13 +486,20 @@ export default function AppV2() {
               agents={agents}
               selected={selectedAgent}
               onSelect={(agent) => setSelectedAgentId(agent.id)}
+              explorerBaseUrl={contractsQuery.data!.chain.explorerUrl}
+              agentRegistryAddress={contractsQuery.data!.core.agentRegistry}
             />
           </section>
         ) : null}
 
         {page === 'strategy' ? (
           <section style={{ paddingTop: 36 }}>
-            <StrategyPage venues={venues} profile={profile} profiles={liveProfiles} />
+            <StrategyPage
+              venues={venues}
+              profile={profile}
+              profiles={liveProfiles}
+              explorerBaseUrl={contractsQuery.data!.chain.explorerUrl}
+            />
           </section>
         ) : null}
 
@@ -595,10 +602,10 @@ export default function AppV2() {
         />
         <TweakSection label="Status" />
         <div className="eyebrow" style={{ color: 'var(--paper-3)' }}>
-          Wallet {isConnected ? 'connected' : 'disconnected'} · Page {isPagePending ? 'updating' : page}
+          Wallet {isConnected ? 'connected' : 'disconnected'} | Page {isPagePending ? 'updating' : page}
         </div>
         <div className="eyebrow" style={{ color: 'var(--paper-3)' }}>
-          Vault owner {portfolioQuery.data ? assetAddressForKey(contractsQuery.data!, portfolioQuery.data.assets[0]?.key || 'USDY') ? 'ready' : 'n/a' : 'loading'}
+          Owner {portfolioQuery.data ? walletLabel(portfolioQuery.data.vault.owner) : 'loading'} | Connected {walletLabel(address)}
         </div>
       </TweaksPanel>
     </>

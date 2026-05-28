@@ -23,152 +23,75 @@ Membuat `sc/` menjadi smart contract layer Equinox yang:
 - risk guardrails
 - preview/reject/execute rebalance
 - deploy script
-- tests yang lumayan kuat untuk MVP
+- fuzz tests
+- invariant suite
+- gas report baseline
+- deployment export artifact
 
-### Belum lengkap
+### Yang masih tertinggal
 
-- fuzz/invariant depth yang lebih tinggi
-- gas report discipline
-- frontend-facing read helper yang lebih kaya
-- real adapter path
-- audit prep package
-
----
-
-## P0: Harden the Current Mock-Based Core
-
-## Task 1: Expand Test Coverage
-
-### Work
-
-- tambah fuzz tests untuk:
-  - allocation sum mismatch
-  - duplicate targets
-  - unsupported asset
-  - unsupported adapter
-  - withdrawal edge cases
-- tambah invariant-style tests untuk:
-  - no asset loss inside mock ecosystem
-  - target weights reset/store consistency
-  - blocked actions do not move funds
-
-### Files likely involved
-
-- `sc/test/`
-
-### Done when
-
-- failure path penting tidak hanya dites dengan fixed example
+- helper view yang lebih ramah FE/BE
+- audit-prep documentation
+- adapter interface review untuk venue nyata
+- emergency/admin production controls
 
 ---
 
-## Task 2: Gas Reporting
+## P1: Contract Architecture and Audit Prep
+
+## Task 1: Frontend-Facing Read Helpers
 
 ### Work
 
-- aktifkan gas snapshots/report
-- ukur:
-  - deposit
-  - withdraw
-  - preview rebalance
-  - execute rebalance
-  - record rejected decision
-
-### Done when
-
-- ada baseline biaya fungsi utama
-
----
-
-## Task 3: Frontend Read Helpers
-
-### Why
-
-Jika FE butuh terlalu banyak transform off-chain, bisa bantu dengan helper view.
-
-### Work
-
-- evaluasi kebutuhan helper view seperti:
+- evaluasi helper view:
   - allocation summary
   - active strategy summary
   - latest adapter snapshot rollup
+- kurangi kebutuhan multicall FE/BE jika memang masuk akal
 
 ### Done when
 
-- FE/BE tidak perlu multicall berlebihan untuk kebutuhan sederhana
+- FE/BE tidak perlu transform terlalu berat untuk read path umum
 
 ---
 
-## Task 4: Deployment and Config Hygiene
+## Task 2: Adapter Interface Review
 
 ### Work
 
-- version output deploy
-- simpan address artifacts yang mudah dipakai FE/BE
-- pastikan deploy validation pasca-deploy
+- audit `IStrategyAdapter` untuk kebutuhan Aave-like dan CeFi accounting adapter
+- cek reporting hooks dan emergency semantics yang belum ada
 
 ### Done when
 
-- deploy repeatable dan address handoff rapi
+- interface tidak perlu dibongkar besar saat real adapter dimulai
 
 ---
 
-## P1: Contract Architecture for Real Integrations
-
-## Task 5: Adapter Interface Review
+## Task 3: Audit Prep Package
 
 ### Work
 
-- audit `IStrategyAdapter` dari perspektif adapter nyata
-- pastikan interface cukup untuk:
-  - Aave-like adapter
-  - CeFi accounting adapter
-  - reporting hooks
+- contract assumptions doc
+- threat model notes
+- privileged role matrix
+- reference untuk gas baseline dan deployment artifact
 
 ### Done when
 
-- interface tidak perlu dibongkar total saat real integration mulai
-
----
-
-## Task 6: Risk Model Deepening
-
-### Work
-
-- tambahkan profile-based adapter constraints bila perlu
-- tambahkan per-venue or per-asset policy flags
-- evaluasi circuit breaker rules
-
-### Done when
-
-- vault guardrails siap untuk venue nyata yang lebih kompleks
-
----
-
-## Task 7: Audit Prep
-
-### Work
-
-- rapikan NatSpec jika masih ada gap
-- buat contract assumptions doc
-- buat threat model notes
-- buat privileged role matrix
-
-### Done when
-
-- repo SC siap di-review lebih formal
+- repo `sc/` siap di-review lebih formal
 
 ---
 
 ## P2: Mainnet and Institutional Path
 
-## Task 8: Real Strategy Adapters
+## Task 4: Real Strategy Adapters
 
 ### Work
 
-- buat adapter produksi untuk protocol yang benar-benar tersedia
-- tambahkan fork tests
-- tambahkan behavior tests untuk protocol state edge cases
+- tambah adapter produksi untuk venue nyata yang memang tersedia
+- tambah fork tests
+- tambah edge-case tests per protocol
 
 ### Done when
 
@@ -176,27 +99,27 @@ Jika FE butuh terlalu banyak transform off-chain, bisa bantu dengan helper view.
 
 ---
 
-## Task 9: Emergency and Admin Controls
+## Task 5: Emergency and Admin Controls
 
 ### Work
 
 - evaluasi pause granularity
-- evaluasi emergency withdrawal patterns
+- evaluasi emergency withdrawal
 - evaluasi role separation untuk production
 
 ### Done when
 
-- ada control surface yang cukup untuk mainnet incidents
+- ada control surface yang layak untuk incident handling
 
 ---
 
-## Task 10: External Audit Remediation Loop
+## Task 6: External Audit Remediation Loop
 
 ### Work
 
 - jalankan audit
-- perbaiki temuan
-- tambah regression test untuk setiap temuan
+- tutup temuan
+- tambah regression test per finding
 
 ### Done when
 
@@ -204,20 +127,11 @@ Jika FE butuh terlalu banyak transform off-chain, bisa bantu dengan helper view.
 
 ---
 
-## Dependencies
-
-- `BE` akan memberi tahu kebutuhan helper view dan semantics execution
-- `AI` akan mempengaruhi metadata/reasoning semantics, bukan custody semantics inti
-- protocol availability nyata menentukan bentuk adapter produksi
-
----
-
 ## Definition of Done for SC
 
-SC dianggap `done` untuk fase berikutnya jika:
+SC dianggap siap ke fase berikutnya jika:
 
-- test depth kuat
-- gas baseline tersedia
-- role and risk assumptions terdokumentasi
+- helper read path yang dibutuhkan FE/BE sudah jelas
 - adapter interface siap untuk venue nyata
-- deployment discipline rapi
+- audit-prep docs tersedia
+- emergency/admin hardening punya desain yang jelas

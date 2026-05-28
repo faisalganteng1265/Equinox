@@ -21,14 +21,14 @@ export function V2TopBar({
 
   return (
     <header className="top">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
+      <div className="top-brand">
         <Mark />
         <span className="eyebrow" style={{ borderLeft: '1px solid var(--rule)', paddingLeft: 18 }}>
-          Mantle Sepolia · ERC-8004
+          Mantle Sepolia | ERC-8004
         </span>
       </div>
 
-      <nav style={{ display: 'flex', gap: 4 }}>
+      <nav className="top-nav">
         {navItems.map((item) => (
           <button
             key={item.id}
@@ -47,7 +47,7 @@ export function V2TopBar({
         ))}
       </nav>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div className="top-cta">
         <span className="live-dot" />
         <span className="eyebrow" style={{ color: 'var(--paper-2)' }}>Live</span>
         <span style={{ width: 1, height: 18, background: 'var(--rule)', margin: '0 6px' }} />
@@ -67,7 +67,7 @@ export function Mark() {
         <circle cx="14" cy="14" r="2" fill="var(--accent)" />
       </svg>
       <span style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 22, letterSpacing: '-0.01em' }}>
-        Equinox<span style={{ color: 'var(--accent)' }}>·</span>RWA
+        Equinox<span style={{ color: 'var(--accent)' }}>.</span>RWA
       </span>
     </div>
   );
@@ -91,8 +91,8 @@ export function MemoHero({
   return (
     <section className="hero">
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <span className="eyebrow">Memo № {memo.no.padStart(3, '0')}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+          <span className="eyebrow">Memo #{memo.no.padStart(3, '0')}</span>
           <span style={{ width: 32, height: 1, background: 'var(--rule)' }} />
           <span className="eyebrow" style={{ color: 'var(--paper-2)' }}>{memo.date}</span>
           <span style={{ width: 32, height: 1, background: 'var(--rule)' }} />
@@ -101,7 +101,7 @@ export function MemoHero({
 
         <h1>
           Rebalanced <em>{memo.delta}</em> {memo.from}{' '}
-          <span style={{ color: 'var(--paper-3)' }}>→</span> {memo.to} ahead of{' '}
+          <span style={{ color: 'var(--paper-3)' }}>-&gt;</span> {memo.to} ahead of{' '}
           <em>Mantle staking incentive cycle.</em>
         </h1>
 
@@ -118,7 +118,7 @@ export function MemoHero({
           {memo.body}
         </p>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginTop: 24, color: 'var(--paper-3)', fontSize: 13 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginTop: 24, color: 'var(--paper-3)', fontSize: 13, flexWrap: 'wrap' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <Icon name="agent" size={14} color="var(--paper-2)" />
             <span>By <span style={{ color: 'var(--paper)' }}>{agent.name}</span></span>
@@ -143,13 +143,13 @@ export function MemoHero({
           }}
         >
           <div className="eyebrow">Net Asset Value</div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
             <span className="display italic" style={{ fontSize: 44, lineHeight: 1, letterSpacing: '-0.02em', color: 'var(--paper)', whiteSpace: 'nowrap' }}>
               <span style={{ fontFamily: 'var(--font-ui)', fontStyle: 'normal', fontSize: 22, color: 'var(--paper-3)', marginRight: 4 }}>$</span>
               {navValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
-          <div style={{ display: 'flex', gap: 18, marginTop: 14, fontSize: 12, color: 'var(--paper-3)' }}>
+          <div style={{ display: 'flex', gap: 18, marginTop: 14, fontSize: 12, color: 'var(--paper-3)', flexWrap: 'wrap' }}>
             <span><span className="eyebrow">24h</span> <span className="num pos" style={{ marginLeft: 6, fontSize: 13 }}>{change24 >= 0 ? '+' : ''}{change24.toFixed(2)}%</span></span>
             <span><span className="eyebrow">YTD</span> <span className="num pos" style={{ marginLeft: 6, fontSize: 13 }}>{ytd >= 0 ? '+' : ''}{ytd.toFixed(2)}%</span></span>
             <span><span className="eyebrow">Sharpe</span> <span className="num" style={{ marginLeft: 6, fontSize: 13, color: 'var(--paper)' }}>{agent.sharpe.toFixed(2)}</span></span>
@@ -195,7 +195,7 @@ export function AgentMark({ agent, profile }: { agent: Agent; profile: string })
             {agent.name}
           </div>
           <div className="mono" style={{ color: 'var(--paper-3)', fontSize: 12, marginTop: 4 }}>
-            #{agent.id} · {profile}
+            #{agent.id} | {profile}
           </div>
           <div style={{ display: 'flex', gap: 10, marginTop: 12, alignItems: 'center' }}>
             <ReputationBar score={agent.score} />

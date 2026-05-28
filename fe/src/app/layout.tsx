@@ -22,7 +22,7 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: 'Equinox RWA · Capital Topology',
+  title: 'Equinox RWA | Capital Topology',
   description: 'AI-native RWA portfolio management on Mantle. ERC-8004 agent identity.',
 };
 

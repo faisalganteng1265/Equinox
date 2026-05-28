@@ -3,6 +3,8 @@
 /cache/
 /lib/
 /out/
+/deployments/
+/scripts/
 
 # Local environment
 .env

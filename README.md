@@ -96,9 +96,9 @@ Sistem ini memisahkan logika matematika off-chain yang kompleks dari penegakan k
                                | (Sinyal Optimasi & Log Keputusan)
                                v
 +-----------------------------------------------------------------+
-|                    3. AI / QUANT ENGINE                         |
-|  - Python Portfolio Optimizer       - Risk Matrix Controller     |
-|  - Agent Reasoning Generator                                     |
+|                3. STRATEGY & REASONING LAYER                    |
+|  - Backend Strategy Engine         - Risk Matrix Controller      |
+|  - OpenRouter Reasoning Provider                                 |
 +-----------------------------------------------------------------+
 ```
 
@@ -122,9 +122,9 @@ State: `mapping(uint256 => AgentStats) public agentRegistry` (menyimpan metrik w
 
 Fungsi `logDecision(uint256 agentId, string memory reasoningHash, bytes memory performanceData)`: Mencatat hash argumen keputusan AI secara permanen di blockchain (on-chain decision logging).
 
-### B. Layer Backend & AI Engine (Express.js & Python)
+### B. Layer Backend & Reasoning Engine (Express.js & OpenRouter)
 
-Kombinasi performa asinkronus Node.js untuk operasi Web3 dan kecerdasan Python untuk pemodelan kuantitatif.
+Kombinasi performa asinkronus Node.js untuk operasi Web3, strategy logic deterministic di backend, dan provider LLM untuk reasoning yang dapat diaudit.
 
 **mantle-yield-orchestrator (Backend Express.js):**
 
@@ -134,13 +134,13 @@ Bybit API Connector: Mengelola modul koneksi terenkripsi ke API institusional By
 
 Menyediakan REST API internal untuk memperbarui data ke live dashboard antarmuka pengguna.
 
-**ai-quant-engine (Python Engine):**
+**strategy-and-reasoning layer (Backend + OpenRouter):**
 
-Menjalankan skrip model optimasi matematika (seperti algoritma batas efisiensi volatilitas portfolio).
+Backend tetap menghitung target strategi secara deterministic berdasarkan data pasar, batas profil risiko, dan guardrail execution.
 
-Fungsi `evaluate_yield_curves()`: Secara konstan memetakan kurva yield dari semua instrumen (on-chain & off-chain). AI menghitung biaya gas riil di Mantle sebelum mengeluarkan instruksi rebalancing untuk mencegah terkurasnya keuntungan akibat biaya jaringan yang tidak perlu (gas-aware optimization).
+Fungsi `evaluate_yield_curves()`: Logika backend secara konstan memetakan kurva yield dari semua instrumen (on-chain & off-chain), menghitung biaya gas riil di Mantle, dan membentuk target rebalancing yang efisien.
 
-Fungsi `generate_reasoning()`: Mengonversi data matriks angka menjadi teks narasi natural yang mudah dipahami manusia (misal: "Memindahkan 10% dari fBTC ke USDY karena volatilitas mingguan BTC melonjak 23%") untuk ditampilkan pada feed dApp.
+Fungsi `generate_reasoning()`: Provider LLM seperti `OpenRouter` mengonversi context strategi dan data risiko menjadi teks narasi natural yang mudah dipahami manusia untuk ditampilkan pada feed dApp.
 
 ## 4. Alur Kerja (Skenario Demo Hackathon)
 
@@ -156,7 +156,7 @@ Skenario pembuktian aplikasi untuk Demo Day dirancang guna memperlihatkan keungg
 
 **Aksi:** Suku bunga dasar obligasi AS pada token USDY turun, sementara insentif pool mETH di ekosistem DeFi Mantle melonjak.
 
-**Eksekusi:** Python Engine mendeteksi anomali ini, menghitung efisiensi gas, dan memerintahkan backend Express.js mengeksekusi rebalancing. Dana dipindahkan secara otonom dari USDY ke mETH.
+**Eksekusi:** Backend strategy engine mendeteksi anomali ini, menghitung efisiensi gas, dan mengeksekusi rebalancing. Layer reasoning kemudian menjelaskan keputusan tersebut ke pengguna. Dana dipindahkan secara otonom dari USDY ke mETH.
 
 **Hasil:** Keputusan dicatat via ERC-8004, dan dashboard memperlihatkan "Agent Reasoning Feed" secara real-time. Juri dapat melihat transparansi logika AI secara langsung.
 
@@ -185,5 +185,5 @@ Skenario pembuktian aplikasi untuk Demo Day dirancang guna memperlihatkan keungg
 | Web3 Client Engine | Viem, TypeScript | Library berkinerja tinggi untuk mendengarkan RPC event Mantle, merakit transaksi, dan berinteraksi secara aman dari backend ke smart contract. |
 | CeFi Integrator | Bybit API | Menghubungkan ekosistem backend ke bursa Bybit untuk membaca data suku bunga Earn dan memindahkan likuiditas secara hibrida. |
 | Backend Orchestrator | Express.js & Node.js | Pusat kendali operasional, bertindak sebagai agregator data, menangani otentikasi API, dan menyajikan data real-time ke dasbor aplikasi. |
-| AI / Mathematical Engine | Python | Menjalankan analisis kuantitatif, pemodelan portofolio rendah risiko, manajemen matriks volatilitas, dan generator teks alasan keputusan agen. |
+| Strategy & Reasoning Layer | Express.js, TypeScript, OpenRouter | Backend menghitung target strategi secara deterministic, lalu provider reasoning menghasilkan penjelasan natural-language, confidence summary, dan konteks keputusan agen. |
 | Target Network | Mantle Network | Menyediakan finalitas transaksi instan, biaya gas ultra-murah, akses langsung ke likuiditas mETH/USDY, serta pemenuhan syarat utama track AI x RWA. |

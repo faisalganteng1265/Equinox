@@ -21,274 +21,104 @@ Membuat `fe/` menjadi frontend Equinox yang:
 - deposit and withdraw via wallet
 - preview / execute / reject via backend
 - Mantle gas estimate via `@mantleio/sdk`
+- demo faucet flow via backend `/api/demo/mint`
+- tx explorer link untuk write flow
+- agent registry, decision feed, dan topology sudah live
+- responsive pass dasar dan micro-polish P0 sudah beres
+- checklist manual ada di [FE_MANUAL_TEST_CHECKLIST.md](C:/Users/bagas/Downloads/Dapp%20Project/Equinox/docs/FE_MANUAL_TEST_CHECKLIST.md)
 
-### Belum lengkap
+### Yang masih tertinggal
 
-- faucet / top-up UX
-- tx explorer UX
-- loading and error polish
-- state refresh polish after tx
-- mobile polish
-- E2E test suite
-- explicit demo mode UX
-
----
-
-## P0: Demo and Testing Stability
-
-## Task 1: Demo Faucet Flow
-
-### Why
-
-Supaya user demo tidak perlu mint manual via backend tool atau curl.
-
-### Work
-
-- tambahkan tombol `Request Demo Assets`
-- panggil endpoint backend demo mint jika diaktifkan
-- tampilkan state:
-  - idle
-  - minting
-  - success
-  - failure
-- batasi hanya untuk asset yang memang dipakai dalam demo
-
-### Files likely involved
-
-- `fe/src/app/page.tsx`
-- `fe/src/components/modals.tsx`
-- `fe/src/lib/equinox-api.ts`
-
-### Done when
-
-- user bisa top-up mock asset langsung dari FE
-- error state jelas kalau backend mint dimatikan
+- `page.tsx` masih cukup besar
+- belum ada automated FE test harness
+- belum ada reasoning UI yang kaya untuk AI output berikutnya
 
 ---
 
-## Task 2: Explorer Links and Tx Visibility
+## P1: Maintainability and Testability
 
-### Why
-
-Saat ini user perlu visibility lebih jelas terhadap tx hasil deposit, withdraw, execute, dan reject.
+## Task 1: Refactor Data Mapping Layer
 
 ### Work
 
-- buat helper `explorerUrlForTx`
-- tampilkan link ke Mantle explorer untuk:
-  - deposit tx
-  - withdraw tx
-  - execute tx
-  - reject tx
-- tampilkan short tx hash yang konsisten di history and modal
-
-### Files likely involved
-
-- `fe/src/lib/equinox-ui.ts`
-- `fe/src/components/modals.tsx`
-- `fe/src/components/agents-page.tsx`
-- `fe/src/components/v2-pieces.tsx`
-
-### Done when
-
-- semua tx penting bisa dibuka ke explorer dari FE
-
----
-
-## Task 3: Loading and Error Polish
-
-### Why
-
-Supaya FE tidak terasa seperti prototype saat network lambat atau write action gagal.
-
-### Work
-
-- rapikan skeleton/loading states untuk:
-  - portfolio
-  - agents
-  - strategy
-  - history
-- rapikan error banners yang konsisten
-- tambahkan empty state untuk:
-  - belum ada decision history
-  - wallet belum connect
-  - backend tidak reachable
-
-### Files likely involved
-
-- `fe/src/app/page.tsx`
-- `fe/src/components/modals.tsx`
-- `fe/src/components/agents-page.tsx`
-
-### Done when
-
-- tidak ada state penting yang "diam" saat gagal atau kosong
-
----
-
-## Task 4: Owner Wallet Guidance
-
-### Why
-
-Vault saat ini single-user owner-based, jadi UX harus sangat jelas saat wallet yang connect bukan owner.
-
-### Work
-
-- tampilkan badge atau notice `Vault Owner` vs `Connected Wallet`
-- disable action tertentu jika bukan owner
-- tampilkan why action blocked
-
-### Files likely involved
-
-- `fe/src/app/page.tsx`
-- `fe/src/components/modals.tsx`
-
-### Done when
-
-- user tidak bingung kenapa deposit/withdraw gagal karena wallet salah
-
----
-
-## Task 5: Manual Test Checklist UI
-
-### Why
-
-Supaya FE siap demo tanpa trial-and-error.
-
-### Work
-
-- buat `docs` manual checklist kecil untuk FE
-- validasi semua flow:
-  - connect wallet
-  - wrong network
-  - faucet
-  - deposit
-  - withdraw
-  - preview
-  - execute
-  - reject
-
-### Done when
-
-- ada checklist FE yang bisa dijalankan orang lain
-
----
-
-## P1: Quality and Maintainability
-
-## Task 6: Refactor Data Mapping Layer
-
-### Why
-
-Saat ini transform data hidup cukup banyak di `page.tsx`.
-
-### Work
-
-- pindahkan mapping logic tambahan ke `lib/equinox-ui.ts`
-- buat query hooks terpisah jika perlu
+- pindahkan transform tambahan dari `page.tsx` ke helper atau hooks
 - kecilkan tanggung jawab `page.tsx`
+- kelompokkan selector UI per domain section
 
 ### Done when
 
-- `page.tsx` lebih fokus ke composition, bukan ke transform data panjang
+- `page.tsx` lebih fokus ke composition
 
 ---
 
-## Task 7: Component Split for Actions
-
-### Why
-
-Supaya write actions tidak menumpuk di satu file besar.
+## Task 2: Split Action Components
 
 ### Work
 
-- pisahkan action panel dari `page.tsx`
-- pisahkan transaction state component
-- pisahkan portfolio action controls
-
-### Suggested target files
-
-- `fe/src/components/portfolio-actions.tsx`
-- `fe/src/components/tx-status-panel.tsx`
-- `fe/src/components/demo-faucet.tsx`
+- pisahkan action panel dari page utama
+- pisahkan tx state panel
+- pisahkan faucet surface dari container utama
 
 ### Done when
 
-- komponen page utama lebih mudah dibaca dan dipelihara
+- komponen action bisa dirawat tanpa membongkar seluruh halaman
 
 ---
 
-## Task 8: Frontend Testing
-
-### Why
-
-FE belum punya automated test coverage.
+## Task 3: Automated Frontend Tests
 
 ### Work
 
-- tambahkan unit test minimal untuk helper mapping
-- tambahkan integration test untuk action components
-- tambahkan E2E plan untuk browser:
-  - load app
+- tambah unit test minimal untuk helper mapping
+- tambah integration test untuk action state
+- tambah E2E smoke plan untuk:
+  - app load
   - backend reachable
-  - action buttons tampil
-
-### Note
-
-Wallet E2E penuh mungkin butuh setup khusus dan tidak harus selesai di tahap awal.
+  - key controls visible
 
 ### Done when
 
-- ada minimal test harness untuk FE
+- ada regression harness dasar untuk FE
 
 ---
 
 ## P2: Product Maturity
 
-## Task 9: Better Portfolio Analytics UI
+## Task 4: Richer Portfolio and Reasoning UI
 
 ### Work
 
-- allocation trend
-- market snapshot freshness
-- strategy score cards
-- blocked decision analytics
+- tampilkan reasoning payload AI yang terstruktur
+- tampilkan confidence score
+- tampilkan snapshot freshness
+- tampilkan blocked decision analytics
 
 ### Done when
 
-- FE tidak hanya menampilkan current state, tapi juga decision context dan historical insight
+- FE menampilkan konteks keputusan, bukan hanya state saat ini
 
 ---
 
-## Task 10: Institutional Reporting Surface
+## Task 5: Institutional Reporting Surface
 
 ### Work
 
 - exportable reports
-- AUM / exposure summary
+- exposure summary
 - performance attribution
-- risk profile compliance summary
+- compliance summary per risk profile
 
 ### Done when
 
-- FE bisa menjadi operator console dan stakeholder reporting surface
-
----
-
-## Dependencies
-
-- `BE` harus stabil untuk response contracts
-- `SC` ABI/behavior jangan berubah besar saat FE P0 dijalankan
-- `AI` nanti akan menambah reasoning payload yang perlu ditampilkan
+- FE bisa dipakai sebagai operator console dan reporting surface
 
 ---
 
 ## Definition of Done for FE
 
-FE dianggap `done` untuk fase berikutnya jika:
+FE dianggap siap untuk fase berikutnya jika:
 
-- wallet flow lancar
-- user bisa top-up, deposit, withdraw tanpa bingung
-- tx dan error states jelas
-- preview/execute/reject terlihat jelas di UI
-- demo flow bisa dipandu sepenuhnya dari FE
+- automated tests dasar sudah ada
+- komposisi komponen utama lebih rapi
+- reasoning output AI bisa ditampilkan jelas
+- manual testing checklist tetap relevan dan mudah dijalankan

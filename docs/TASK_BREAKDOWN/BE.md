@@ -6,7 +6,8 @@ Membuat `be/` menjadi orchestration backend Equinox yang:
 
 - stabil untuk demo
 - punya contract interface yang rapi
-- siap menerima AI engine
+- memegang strategy logic utama
+- memakai `OpenRouter` hanya untuk reasoning
 - bisa tumbuh menjadi automation layer nyata
 
 ---
@@ -15,138 +16,36 @@ Membuat `be/` menjadi orchestration backend Equinox yang:
 
 ### Sudah ada
 
-- read API untuk contracts, vault, portfolio, market, agent
-- write API untuk preview / execute / reject / snapshot / price / demo mint
-- operator signer via `viem`
-- live integration dengan Mantle Sepolia
+- read API dan write API inti sudah hidup
+- env validation fail-fast
+- error contract konsisten dengan `reason`
+- structured logging dan request correlation
+- timeout dan retry dasar untuk RPC reads
+- smoke test backend dengan `vitest`
+- contract address dan signer operator live di Mantle Sepolia
 
-### Belum lengkap
+### Yang masih tertinggal
 
-- database
-- scheduler
-- automation loop
-- structured logging matang
-- test suite formal
-- retry policy matang
-- observability
-- auth beyond `WRITE_API_KEY`
-
----
-
-## P0: Backend Hardening for Current Demo
-
-## Task 1: Environment Validation Hardening
-
-### Work
-
-- validasi semua env wajib saat boot
-- fail fast jika address atau private key invalid
-- tampilkan boot summary yang aman
-
-### Files likely involved
-
-- `be/src/config/env.ts`
-- `be/src/index.ts`
-
-### Done when
-
-- backend tidak bisa start dalam state setengah valid
-
----
-
-## Task 2: Consistent Error Contract
-
-### Work
-
-- audit semua endpoint error shape
-- standarkan:
-  - `error`
-  - `details`
-  - `statusCode`
-  - optional machine-readable reason
-
-### Files likely involved
-
-- `be/src/lib/app-error.ts`
-- `be/src/index.ts`
-- `be/src/services/equinox.ts`
-
-### Done when
-
-- FE bisa mengandalkan satu bentuk error response
-
----
-
-## Task 3: Logging and Request Correlation
-
-### Work
-
-- tambahkan request ID
-- log endpoint, status, elapsed time
-- log tx hash untuk write actions
-- log preview result for execute/reject
-
-### Done when
-
-- setiap action penting bisa ditelusuri dari request ke tx
-
----
-
-## Task 4: RPC Reliability Basics
-
-### Work
-
-- tambah retry minimal untuk read path penting
-- tambah timeout yang eksplisit
-- tambah fallback handling kalau RPC lambat
-
-### Done when
-
-- backend tidak mudah gagal hanya karena hiccup kecil dari public RPC
-
----
-
-## Task 5: Backend Test Skeleton
-
-### Work
-
-- pilih test framework
-- buat smoke tests untuk:
-  - `/health`
-  - `/api/contracts`
-  - `/api/portfolio`
-  - `/api/agents/:id`
-  - `/api/rebalance/preview`
-
-### Done when
-
-- ada minimal regression protection untuk endpoint inti
+- belum ada persistence layer
+- belum ada scheduler / worker loop
+- logic masih cukup terpusat di service tunggal
+- belum ada layer reasoning provider
+- belum ada auth maturity di luar `WRITE_API_KEY`
+- belum ada observability ops-grade
 
 ---
 
 ## P1: Automation Foundation
 
-## Task 6: Add Persistence Layer
-
-### Why
-
-Tanpa DB, backend tidak bisa menjadi orchestration engine sungguhan.
+## Task 1: Add Persistence Layer
 
 ### Work
 
 - pilih database
-- simpan:
-  - market snapshots history
-  - rebalance jobs
-  - execution attempts
-  - operator actions
-  - reasoning payload references
-
-### Suggested new folder shape
-
-- `be/src/db/`
-- `be/src/repositories/`
-- `be/src/models/`
+- simpan market snapshots history
+- simpan execution attempts
+- simpan rebalance jobs
+- simpan reference ke payload reasoning
 
 ### Done when
 
@@ -154,67 +53,64 @@ Tanpa DB, backend tidak bisa menjadi orchestration engine sungguhan.
 
 ---
 
-## Task 7: Scheduler / Job Runner
+## Task 2: Split Domain Modules
 
 ### Work
 
-- buat scheduler loop
-- definisikan jobs:
-  - fetch market data
-  - compute targets
-  - preview rebalance
-  - execute rebalance
-  - record rejected decision
-
-### Suggested new folder shape
-
-- `be/src/jobs/`
-- `be/src/workers/`
-
-### Done when
-
-- backend bisa bekerja tanpa trigger manual dari FE
-
----
-
-## Task 8: Internal Domain Modules
-
-### Work
-
-- pisahkan domain service:
+- pecah `services/equinox.ts` menjadi domain modules:
   - `portfolio-service`
   - `market-service`
-  - `rebalance-service`
+  - `strategy-service`
+  - `reasoning-service`
   - `agent-service`
   - `operator-service`
 
 ### Done when
 
-- logic tidak terlalu terpusat di satu service file
+- logic orchestration tidak menumpuk di satu file
 
 ---
 
-## Task 9: AI Engine Integration Contract
+## Task 3: OpenRouter Reasoning Layer
 
 ### Work
 
-- definisikan request/response untuk AI service
-- tentukan format:
-  - market input
-  - risk profile input
-  - proposed targets
-  - reasoning payload
-  - confidence score
+- buat client `OpenRouter` di backend
+- desain prompt dan output schema untuk reasoning only
+- strategy target tetap dihitung deterministic di backend
+- reasoning provider hanya menerima context dan mengembalikan:
+  - explanation
+  - confidence
+  - optional summary fields
+- tambah fallback jika provider gagal
 
 ### Done when
 
-- `BE` bisa memanggil `AI` nanti tanpa refactor arsitektur besar
+- backend bisa menghasilkan reasoning kaya tanpa memindahkan strategy logic keluar dari `BE`
+
+---
+
+## Task 4: Scheduler and Job Runner
+
+### Work
+
+- buat loop job untuk:
+  - fetch data
+  - compute target portfolio
+  - request reasoning
+  - preview rebalance
+  - execute atau reject
+- tambah idempotency dan retry policy pada job layer
+
+### Done when
+
+- backend bisa berjalan tanpa trigger manual dari FE
 
 ---
 
 ## P2: Production and Institutional Path
 
-## Task 10: Real Integration Adapters
+## Task 5: Real Integration Adapters
 
 ### Work
 
@@ -229,7 +125,7 @@ Tanpa DB, backend tidak bisa menjadi orchestration engine sungguhan.
 
 ---
 
-## Task 11: Auth and Access Maturity
+## Task 6: Auth and Access Maturity
 
 ### Work
 
@@ -239,18 +135,18 @@ Tanpa DB, backend tidak bisa menjadi orchestration engine sungguhan.
 
 ### Done when
 
-- backend write surface tidak bergantung pada shared static key saja
+- write surface tidak bergantung pada shared static key saja
 
 ---
 
-## Task 12: Observability and Ops
+## Task 7: Observability and Ops
 
 ### Work
 
 - metrics
-- health dashboards
-- alerting
-- dead-letter and failure visibility
+- dashboards
+- alerts
+- failure visibility
 
 ### Done when
 
@@ -258,21 +154,13 @@ Tanpa DB, backend tidak bisa menjadi orchestration engine sungguhan.
 
 ---
 
-## Dependencies
-
-- `AI` dibutuhkan untuk automation yang benar-benar cerdas
-- `SC` harus stabil untuk write semantics
-- `FE` akan bergantung pada response shape yang stabil
-
----
-
 ## Definition of Done for BE
 
-BE dianggap `done` untuk fase berikutnya jika:
+BE dianggap siap ke fase berikutnya jika:
 
-- response contract stabil
-- write actions aman dan traceable
-- ada persistence
-- ada scheduler
-- ada integration contract ke AI
-- ada basic automated tests
+- persistence ada
+- reasoning provider layer ada
+- scheduler/job runner ada
+- domain modules tidak lagi menumpuk di satu service file
+- strategy logic tetap deterministic dan terkontrol
+- auth dan observability mulai naik kelas

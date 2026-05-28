@@ -198,9 +198,25 @@ input:focus, select:focus { border-color: var(--accent); }
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
   height: 64px;
+  min-height: 64px;
+  padding-top: 10px;
+  padding-bottom: 10px;
   border-bottom: 1px solid var(--rule);
 }
+
+.top-brand,
+.top-nav,
+.top-cta {
+  display: flex;
+  align-items: center;
+}
+
+.top-brand { gap: 28px; }
+.top-nav { gap: 4px; }
+.top-cta { gap: 12px; }
 
 /* Hero band */
 .hero {
@@ -240,6 +256,29 @@ input:focus, select:focus { border-color: var(--accent); }
   letter-spacing: -0.015em;
   margin: 0;
   color: var(--paper);
+}
+
+.asset-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.reason-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) 360px;
+  gap: 32px;
+}
+
+.agents-layout {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.table-scroll {
+  overflow-x: auto;
 }
 
 /* Topology */
@@ -323,6 +362,8 @@ input:focus, select:focus { border-color: var(--accent); }
   box-shadow: 0 32px 64px -20px rgba(0,0,0,0.6);
   max-width: 480px;
   width: calc(100% - 32px);
+  max-height: calc(100vh - 24px);
+  overflow: auto;
   animation: slide-up 280ms cubic-bezier(.2,.7,.2,1) both;
 }
 
@@ -351,6 +392,42 @@ svg { display: block; }
 @media (max-width: 1100px) {
   .shell { padding: 0 20px 20px; }
   .hero  { grid-template-columns: 1fr; gap: 24px; padding: 28px 0; }
+  .asset-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .reason-grid,
+  .agents-layout { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 900px) {
+  .top {
+    height: auto;
+    align-items: flex-start;
+  }
+
+  .top-brand,
+  .top-cta {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .top-nav {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .section-head {
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .asset-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .agent-detail-card {
+    position: static !important;
+    top: auto !important;
+  }
 }
 
 /* ── Tweaks panel ── */

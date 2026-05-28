@@ -31,6 +31,7 @@ import { env } from "../config/env.js";
 import { AppError } from "../lib/app-error.js";
 import { formatFixedE18, formatTokenAmount, rebalanceReasonNames, riskProfileNames, toEnumLabel, venueTypeNames, weightFromValue } from "../lib/format.js";
 import { deriveHashFromPayload, normalizeExplicitHash } from "../lib/hash.js";
+import { withRpcRead } from "../lib/rpc.js";
 import { operatorAccount, publicClient, walletClient } from "./clients.js";
 
 interface StrategyTargetInput {
@@ -128,14 +129,19 @@ function resolveAssetDefinition(reference: string): AssetDefinition {
     return bySymbol;
   }
 
-  throw new AppError(400, `Unknown asset reference: ${reference}`);
+  throw new AppError(400, `Unknown asset reference: ${reference}`, { reference }, "asset_reference_unknown");
 }
 
 function resolveAdapterDefinition(reference: string, asset?: AssetDefinition): AdapterDefinition {
   const byKey = adapterDefinitionByKey.get(reference as AdapterKey);
   if (byKey) {
     if (asset && byKey.assetKey !== asset.key) {
-      throw new AppError(400, `Adapter ${reference} is not registered for asset ${asset.key}`);
+      throw new AppError(
+        400,
+        `Adapter ${reference} is not registered for asset ${asset.key}`,
+        { adapter: reference, assetKey: asset.key },
+        "adapter_asset_mismatch",
+      );
     }
     return byKey;
   }
@@ -144,18 +150,23 @@ function resolveAdapterDefinition(reference: string, asset?: AssetDefinition): A
   const byAddress = adapterDefinitionByAddress.get(lowered);
   if (byAddress) {
     if (asset && byAddress.assetKey !== asset.key) {
-      throw new AppError(400, `Adapter ${reference} is not registered for asset ${asset.key}`);
+      throw new AppError(
+        400,
+        `Adapter ${reference} is not registered for asset ${asset.key}`,
+        { adapter: reference, assetKey: asset.key },
+        "adapter_asset_mismatch",
+      );
     }
     return byAddress;
   }
 
-  throw new AppError(400, `Unknown adapter reference: ${reference}`);
+  throw new AppError(400, `Unknown adapter reference: ${reference}`, { reference }, "adapter_reference_unknown");
 }
 
 function defaultAdapterForAsset(asset: AssetDefinition) {
   const adapter = adapterDefinitionByKey.get(asset.defaultAdapterKey);
   if (!adapter) {
-    throw new AppError(500, `Missing default adapter for asset ${asset.key}`);
+    throw new AppError(500, `Missing default adapter for asset ${asset.key}`, { assetKey: asset.key }, "default_adapter_missing");
   }
 
   return adapter;
@@ -186,7 +197,7 @@ function normalizeHash(reasoningHash: string | undefined, reasoning: unknown) {
     return deriveHashFromPayload(reasoning);
   }
 
-  throw new AppError(400, "Either reasoningHash or reasoning must be provided");
+  throw new AppError(400, "Either reasoningHash or reasoning must be provided", undefined, "reasoning_missing");
 }
 
 function normalizeSourceHash(sourceHash: string | undefined, sourceLabel: string | undefined, payload: unknown) {
@@ -244,10 +255,10 @@ async function getTokenMetadata(assetAddress: Address) {
       ],
     })
     .then(([name, symbol, decimals]) => ({
-    name: name as string,
-    symbol: symbol as string,
-    decimals: Number(decimals),
-  }));
+      name: name as string,
+      symbol: symbol as string,
+      decimals: Number(decimals),
+    }));
 
   tokenMetadataCache.set(cacheKey, metadataPromise);
   return metadataPromise;
@@ -444,16 +455,18 @@ async function loadAssetState(assetDefinition: AssetDefinition, totalPortfolioVa
 }
 
 export async function getHealthSnapshot() {
-  const [blockNumber, chainId] = await Promise.all([publicClient.getBlockNumber(), publicClient.getChainId()]);
+  return withRpcRead("health", async () => {
+    const [blockNumber, chainId] = await Promise.all([publicClient.getBlockNumber(), publicClient.getChainId()]);
 
-  return {
-    status: "ok",
-    chainId,
-    blockNumber: blockNumber.toString(),
-    operatorAddress: operatorAccount.address,
-    vaultAddress: contractAddresses.vault,
-    timestamp: new Date().toISOString(),
-  };
+    return {
+      status: "ok",
+      chainId,
+      blockNumber: blockNumber.toString(),
+      operatorAddress: operatorAccount.address,
+      vaultAddress: contractAddresses.vault,
+      timestamp: new Date().toISOString(),
+    };
+  });
 }
 
 export async function getContractsSnapshot() {
@@ -494,377 +507,388 @@ export async function getContractsSnapshot() {
 }
 
 export async function getVaultSnapshot() {
-  const [owner, authorizedAgent, currentRiskProfile, paused, totalPortfolioValueE18, trackedAssets, agentId] =
-    (await publicClient.multicall({
-      allowFailure: false,
-      contracts: [
-        {
-          address: contractAddresses.vault,
-          abi: vaultAbi,
-          functionName: "owner",
-        },
-        {
-          address: contractAddresses.vault,
-          abi: vaultAbi,
-          functionName: "authorizedAgent",
-        },
-        {
-          address: contractAddresses.vault,
-          abi: vaultAbi,
-          functionName: "currentRiskProfile",
-        },
-        {
-          address: contractAddresses.vault,
-          abi: vaultAbi,
-          functionName: "paused",
-        },
-        {
-          address: contractAddresses.vault,
-          abi: vaultAbi,
-          functionName: "totalPortfolioValueE18",
-        },
-        {
-          address: contractAddresses.vault,
-          abi: vaultAbi,
-          functionName: "getTrackedAssets",
-        },
-        {
-          address: contractAddresses.vault,
-          abi: vaultAbi,
-          functionName: "agentId",
-        },
-      ],
-    })) as [Address, Address, number, boolean, bigint, Address[], bigint];
+  return withRpcRead("vault_snapshot", async () => {
+    const [owner, authorizedAgent, currentRiskProfile, paused, totalPortfolioValueE18, trackedAssets, agentId] =
+      (await publicClient.multicall({
+        allowFailure: false,
+        contracts: [
+          {
+            address: contractAddresses.vault,
+            abi: vaultAbi,
+            functionName: "owner",
+          },
+          {
+            address: contractAddresses.vault,
+            abi: vaultAbi,
+            functionName: "authorizedAgent",
+          },
+          {
+            address: contractAddresses.vault,
+            abi: vaultAbi,
+            functionName: "currentRiskProfile",
+          },
+          {
+            address: contractAddresses.vault,
+            abi: vaultAbi,
+            functionName: "paused",
+          },
+          {
+            address: contractAddresses.vault,
+            abi: vaultAbi,
+            functionName: "totalPortfolioValueE18",
+          },
+          {
+            address: contractAddresses.vault,
+            abi: vaultAbi,
+            functionName: "getTrackedAssets",
+          },
+          {
+            address: contractAddresses.vault,
+            abi: vaultAbi,
+            functionName: "agentId",
+          },
+        ],
+      })) as [Address, Address, number, boolean, bigint, Address[], bigint];
 
-  return {
-    address: contractAddresses.vault,
-    owner,
-    authorizedAgent,
-    paused,
-    currentRiskProfileCode: Number(currentRiskProfile),
-    currentRiskProfile: toEnumLabel(Number(currentRiskProfile), riskProfileNames),
-    agentId: Number(agentId),
-    totalPortfolioValueE18: totalPortfolioValueE18.toString(),
-    totalPortfolioValueFormatted: formatFixedE18(totalPortfolioValueE18),
-    trackedAssets,
-  };
+    return {
+      address: contractAddresses.vault,
+      owner,
+      authorizedAgent,
+      paused,
+      currentRiskProfileCode: Number(currentRiskProfile),
+      currentRiskProfile: toEnumLabel(Number(currentRiskProfile), riskProfileNames),
+      agentId: Number(agentId),
+      totalPortfolioValueE18: totalPortfolioValueE18.toString(),
+      totalPortfolioValueFormatted: formatFixedE18(totalPortfolioValueE18),
+      trackedAssets,
+    };
+  });
 }
 
 export async function getPortfolioSnapshot() {
-  const vault = await getVaultSnapshot();
-  const totalPortfolioValueE18 = BigInt(vault.totalPortfolioValueE18);
-  const metadataContracts = [];
-  const assetContracts = [];
-  const strategyContracts = [];
+  return withRpcRead("portfolio_snapshot", async () => {
+    const vault = await getVaultSnapshot();
+    const totalPortfolioValueE18 = BigInt(vault.totalPortfolioValueE18);
+    const metadataContracts = [];
+    const assetContracts = [];
+    const strategyContracts = [];
 
-  for (const asset of assetDefinitions) {
-    const adapter = defaultAdapterForAsset(asset);
+    for (const asset of assetDefinitions) {
+      const adapter = defaultAdapterForAsset(asset);
 
-    metadataContracts.push(
-      {
-        address: asset.address,
-        abi: tokenAbi,
-        functionName: "name" as const,
-      },
-      {
-        address: asset.address,
-        abi: tokenAbi,
-        functionName: "symbol" as const,
-      },
-      {
-        address: asset.address,
-        abi: tokenAbi,
-        functionName: "decimals" as const,
-      },
-    );
-
-    assetContracts.push(
-      {
-        address: contractAddresses.vault,
-        abi: vaultAbi,
-        functionName: "getAssetPolicy" as const,
-        args: [asset.address],
-      },
-      {
-        address: contractAddresses.vault,
-        abi: vaultAbi,
-        functionName: "getAssetTargetWeight" as const,
-        args: [asset.address],
-      },
-      {
-        address: asset.address,
-        abi: tokenAbi,
-        functionName: "balanceOf" as const,
-        args: [contractAddresses.vault],
-      },
-      {
-        address: contractAddresses.vault,
-        abi: vaultAbi,
-        functionName: "getCurrentAssetExposure" as const,
-        args: [asset.address],
-      },
-      {
-        address: contractAddresses.exchange,
-        abi: exchangeAbi,
-        functionName: "assetPriceE18" as const,
-        args: [asset.address],
-      },
-      {
-        address: contractAddresses.strategyRegistry,
-        abi: strategyRegistryAbi,
-        functionName: "isStrategyApproved" as const,
-        args: [asset.address, adapter.address],
-      },
-    );
-
-    strategyContracts.push(
-      {
-        address: adapter.address,
-        abi: strategyAdapterAbi,
-        functionName: "venueType" as const,
-      },
-      {
-        address: adapter.address,
-        abi: strategyAdapterAbi,
-        functionName: "totalManagedAssets" as const,
-      },
-      {
-        address: adapter.address,
-        abi: strategyAdapterAbi,
-        functionName: "maxWithdraw" as const,
-        args: [contractAddresses.vault],
-      },
-      {
-        address: adapter.address,
-        abi: strategyAdapterAbi,
-        functionName: "balanceOf" as const,
-        args: [contractAddresses.vault],
-      },
-      {
-        address: adapter.address,
-        abi: strategyAdapterAbi,
-        functionName: "latestSnapshot" as const,
-      },
-      {
-        address: contractAddresses.vault,
-        abi: vaultAbi,
-        functionName: "getStrategyTargetWeight" as const,
-        args: [asset.address, adapter.address],
-      },
-    );
-  }
-
-  const metadataResults = (await publicClient.multicall({
-    allowFailure: false,
-    contracts: metadataContracts,
-  })) as Array<string | number>;
-
-  const assetResults = (await publicClient.multicall({
-    allowFailure: false,
-    contracts: assetContracts,
-  })) as Array<VaultAssetPolicy | number | bigint | boolean>;
-
-  const strategyResults = (await publicClient.multicall({
-    allowFailure: false,
-    contracts: strategyContracts,
-  })) as Array<number | bigint | AdapterSnapshot>;
-
-  const assets = [];
-  let metadataOffset = 0;
-  let assetOffset = 0;
-  let strategyOffset = 0;
-
-  for (const asset of assetDefinitions) {
-    const adapter = defaultAdapterForAsset(asset);
-    const name = metadataResults[metadataOffset++] as string;
-    const symbol = metadataResults[metadataOffset++] as string;
-    const decimals = Number(metadataResults[metadataOffset++] as number);
-
-    const policy = assetResults[assetOffset++] as VaultAssetPolicy;
-    const targetWeightBps = Number(assetResults[assetOffset++] as number);
-    const idleBalance = assetResults[assetOffset++] as bigint;
-    const totalExposure = assetResults[assetOffset++] as bigint;
-    const priceE18 = assetResults[assetOffset++] as bigint;
-    const isStrategyApproved = Boolean(assetResults[assetOffset++]);
-
-    const venueType = Number(strategyResults[strategyOffset++] as number);
-    const totalManagedAssets = strategyResults[strategyOffset++] as bigint;
-    const vaultWithdrawable = strategyResults[strategyOffset++] as bigint;
-    const vaultShares = strategyResults[strategyOffset++] as bigint;
-    const snapshot = strategyResults[strategyOffset++] as AdapterSnapshot;
-    const strategyTargetWeight = Number(strategyResults[strategyOffset++] as number);
-
-    const assetValueE18 = (totalExposure * priceE18) / 10n ** 18n;
-    const strategyValueE18 = (totalManagedAssets * priceE18) / 10n ** 18n;
-
-    assets.push({
-      key: asset.key,
-      displayName: name,
-      symbol,
-      configuredLabel: asset.displayName,
-      address: asset.address,
-      decimals,
-      priceE18: priceE18.toString(),
-      priceFormatted: formatFixedE18(priceE18),
-      idleBalance: idleBalance.toString(),
-      idleBalanceFormatted: formatTokenAmount(idleBalance, decimals),
-      totalExposure: totalExposure.toString(),
-      totalExposureFormatted: formatTokenAmount(totalExposure, decimals),
-      assetValueE18: assetValueE18.toString(),
-      assetValueFormatted: formatFixedE18(assetValueE18),
-      currentWeightBps: weightFromValue(assetValueE18, totalPortfolioValueE18),
-      targetWeightBps,
-      policy: {
-        enabled: policy.enabled,
-        riskTier: Number(policy.riskTier),
-        maxAllocationBps: {
-          conservative: Number(policy.maxAllocationBps[0]),
-          balanced: Number(policy.maxAllocationBps[1]),
-          aggressive: Number(policy.maxAllocationBps[2]),
-        },
-      },
-      strategies: [
+      metadataContracts.push(
         {
-          key: adapter.key,
-          label: adapter.displayName,
-          venueLabel: adapter.venueLabel,
+          address: asset.address,
+          abi: tokenAbi,
+          functionName: "name" as const,
+        },
+        {
+          address: asset.address,
+          abi: tokenAbi,
+          functionName: "symbol" as const,
+        },
+        {
+          address: asset.address,
+          abi: tokenAbi,
+          functionName: "decimals" as const,
+        },
+      );
+
+      assetContracts.push(
+        {
+          address: contractAddresses.vault,
+          abi: vaultAbi,
+          functionName: "getAssetPolicy" as const,
+          args: [asset.address],
+        },
+        {
+          address: contractAddresses.vault,
+          abi: vaultAbi,
+          functionName: "getAssetTargetWeight" as const,
+          args: [asset.address],
+        },
+        {
+          address: asset.address,
+          abi: tokenAbi,
+          functionName: "balanceOf" as const,
+          args: [contractAddresses.vault],
+        },
+        {
+          address: contractAddresses.vault,
+          abi: vaultAbi,
+          functionName: "getCurrentAssetExposure" as const,
+          args: [asset.address],
+        },
+        {
+          address: contractAddresses.exchange,
+          abi: exchangeAbi,
+          functionName: "assetPriceE18" as const,
+          args: [asset.address],
+        },
+        {
+          address: contractAddresses.strategyRegistry,
+          abi: strategyRegistryAbi,
+          functionName: "isStrategyApproved" as const,
+          args: [asset.address, adapter.address],
+        },
+      );
+
+      strategyContracts.push(
+        {
           address: adapter.address,
-          approved: isStrategyApproved,
-          venueTypeCode: venueType,
-          venueType: toEnumLabel(venueType, venueTypeNames),
-          totalManagedAssets: totalManagedAssets.toString(),
-          totalManagedAssetsFormatted: formatTokenAmount(totalManagedAssets, decimals),
-          vaultWithdrawable: vaultWithdrawable.toString(),
-          vaultWithdrawableFormatted: formatTokenAmount(vaultWithdrawable, decimals),
-          vaultShares: vaultShares.toString(),
-          targetWeightBps: strategyTargetWeight,
-          currentWeightBps: weightFromValue(strategyValueE18, totalPortfolioValueE18),
-          latestSnapshot: {
-            apyBps: Number(snapshot.apyBps),
-            riskScore: Number(snapshot.riskScore),
-            liquidityScore: Number(snapshot.liquidityScore),
-            sourceTimestamp: Number(snapshot.sourceTimestamp),
-            sourceHash: snapshot.sourceHash,
+          abi: strategyAdapterAbi,
+          functionName: "venueType" as const,
+        },
+        {
+          address: adapter.address,
+          abi: strategyAdapterAbi,
+          functionName: "totalManagedAssets" as const,
+        },
+        {
+          address: adapter.address,
+          abi: strategyAdapterAbi,
+          functionName: "maxWithdraw" as const,
+          args: [contractAddresses.vault],
+        },
+        {
+          address: adapter.address,
+          abi: strategyAdapterAbi,
+          functionName: "balanceOf" as const,
+          args: [contractAddresses.vault],
+        },
+        {
+          address: adapter.address,
+          abi: strategyAdapterAbi,
+          functionName: "latestSnapshot" as const,
+        },
+        {
+          address: contractAddresses.vault,
+          abi: vaultAbi,
+          functionName: "getStrategyTargetWeight" as const,
+          args: [asset.address, adapter.address],
+        },
+      );
+    }
+
+    const metadataResults = (await publicClient.multicall({
+      allowFailure: false,
+      contracts: metadataContracts,
+    })) as Array<string | number>;
+
+    const assetResults = (await publicClient.multicall({
+      allowFailure: false,
+      contracts: assetContracts,
+    })) as Array<VaultAssetPolicy | number | bigint | boolean>;
+
+    const strategyResults = (await publicClient.multicall({
+      allowFailure: false,
+      contracts: strategyContracts,
+    })) as Array<number | bigint | AdapterSnapshot>;
+
+    const assets = [];
+    let metadataOffset = 0;
+    let assetOffset = 0;
+    let strategyOffset = 0;
+
+    for (const asset of assetDefinitions) {
+      const adapter = defaultAdapterForAsset(asset);
+      const name = metadataResults[metadataOffset++] as string;
+      const symbol = metadataResults[metadataOffset++] as string;
+      const decimals = Number(metadataResults[metadataOffset++] as number);
+
+      const policy = assetResults[assetOffset++] as VaultAssetPolicy;
+      const targetWeightBps = Number(assetResults[assetOffset++] as number);
+      const idleBalance = assetResults[assetOffset++] as bigint;
+      const totalExposure = assetResults[assetOffset++] as bigint;
+      const priceE18 = assetResults[assetOffset++] as bigint;
+      const isStrategyApproved = Boolean(assetResults[assetOffset++]);
+
+      const venueType = Number(strategyResults[strategyOffset++] as number);
+      const totalManagedAssets = strategyResults[strategyOffset++] as bigint;
+      const vaultWithdrawable = strategyResults[strategyOffset++] as bigint;
+      const vaultShares = strategyResults[strategyOffset++] as bigint;
+      const snapshot = strategyResults[strategyOffset++] as AdapterSnapshot;
+      const strategyTargetWeight = Number(strategyResults[strategyOffset++] as number);
+
+      const assetValueE18 = (totalExposure * priceE18) / 10n ** 18n;
+      const strategyValueE18 = (totalManagedAssets * priceE18) / 10n ** 18n;
+
+      assets.push({
+        key: asset.key,
+        displayName: name,
+        symbol,
+        configuredLabel: asset.displayName,
+        address: asset.address,
+        decimals,
+        priceE18: priceE18.toString(),
+        priceFormatted: formatFixedE18(priceE18),
+        idleBalance: idleBalance.toString(),
+        idleBalanceFormatted: formatTokenAmount(idleBalance, decimals),
+        totalExposure: totalExposure.toString(),
+        totalExposureFormatted: formatTokenAmount(totalExposure, decimals),
+        assetValueE18: assetValueE18.toString(),
+        assetValueFormatted: formatFixedE18(assetValueE18),
+        currentWeightBps: weightFromValue(assetValueE18, totalPortfolioValueE18),
+        targetWeightBps,
+        policy: {
+          enabled: policy.enabled,
+          riskTier: Number(policy.riskTier),
+          maxAllocationBps: {
+            conservative: Number(policy.maxAllocationBps[0]),
+            balanced: Number(policy.maxAllocationBps[1]),
+            aggressive: Number(policy.maxAllocationBps[2]),
           },
         },
-      ],
-    });
-  }
+        strategies: [
+          {
+            key: adapter.key,
+            label: adapter.displayName,
+            venueLabel: adapter.venueLabel,
+            address: adapter.address,
+            approved: isStrategyApproved,
+            venueTypeCode: venueType,
+            venueType: toEnumLabel(venueType, venueTypeNames),
+            totalManagedAssets: totalManagedAssets.toString(),
+            totalManagedAssetsFormatted: formatTokenAmount(totalManagedAssets, decimals),
+            vaultWithdrawable: vaultWithdrawable.toString(),
+            vaultWithdrawableFormatted: formatTokenAmount(vaultWithdrawable, decimals),
+            vaultShares: vaultShares.toString(),
+            targetWeightBps: strategyTargetWeight,
+            currentWeightBps: weightFromValue(strategyValueE18, totalPortfolioValueE18),
+            latestSnapshot: {
+              apyBps: Number(snapshot.apyBps),
+              riskScore: Number(snapshot.riskScore),
+              liquidityScore: Number(snapshot.liquidityScore),
+              sourceTimestamp: Number(snapshot.sourceTimestamp),
+              sourceHash: snapshot.sourceHash,
+            },
+          },
+        ],
+      });
+    }
 
-  return {
-    vault,
-    assets,
-    updatedAt: new Date().toISOString(),
-  };
+    return {
+      vault,
+      assets,
+      updatedAt: new Date().toISOString(),
+    };
+  });
 }
 
 export async function getMarketSnapshot() {
-  const portfolio = await getPortfolioSnapshot();
+  return withRpcRead("market_snapshot", async () => {
+    const portfolio = await getPortfolioSnapshot();
 
-  return {
-    prices: portfolio.assets.map((asset) => ({
-      assetKey: asset.key,
-      address: asset.address,
-      symbol: asset.symbol,
-      priceE18: asset.priceE18,
-      priceFormatted: asset.priceFormatted,
-    })),
-    adapters: portfolio.assets.flatMap((asset) =>
-      asset.strategies.map((strategy) => ({
+    return {
+      prices: portfolio.assets.map((asset) => ({
         assetKey: asset.key,
-        adapterKey: strategy.key,
-        address: strategy.address,
-        venueType: strategy.venueType,
-        latestSnapshot: strategy.latestSnapshot,
+        address: asset.address,
+        symbol: asset.symbol,
+        priceE18: asset.priceE18,
+        priceFormatted: asset.priceFormatted,
       })),
-    ),
-    updatedAt: portfolio.updatedAt,
-  };
+      adapters: portfolio.assets.flatMap((asset) =>
+        asset.strategies.map((strategy) => ({
+          assetKey: asset.key,
+          adapterKey: strategy.key,
+          address: strategy.address,
+          venueType: strategy.venueType,
+          latestSnapshot: strategy.latestSnapshot,
+        })),
+      ),
+      updatedAt: portfolio.updatedAt,
+    };
+  });
 }
 
 export async function getAgentSnapshot(agentId: number, decisionLimit = 10) {
-  const [exists, stats, decisionCount] = await Promise.all([
-    publicClient.multicall({
-      allowFailure: false,
-      contracts: [
-        {
-          address: contractAddresses.agentRegistry,
-          abi: agentRegistryAbi,
-          functionName: "exists",
-          args: [BigInt(agentId)],
-        },
-        {
-          address: contractAddresses.agentRegistry,
-          abi: agentRegistryAbi,
-          functionName: "getAgentStats",
-          args: [BigInt(agentId)],
-        },
-        {
-          address: contractAddresses.agentRegistry,
-          abi: agentRegistryAbi,
-          functionName: "getDecisionCount",
-          args: [BigInt(agentId)],
-        },
-      ],
-    }),
-  ]).then(([results]) => results as [boolean, AgentStatsResult, bigint]);
-
-  if (!exists) {
-    throw new AppError(404, `Agent ${agentId} does not exist`);
-  }
-
-  const count = Number(decisionCount);
-  const startIndex = Math.max(0, count - Math.max(0, decisionLimit));
-  const indexes = Array.from({ length: count - startIndex }, (_, index) => startIndex + index);
-  const decisions = indexes.length === 0
-    ? []
-    : ((await publicClient.multicall({
+  return withRpcRead("agent_snapshot", async () => {
+    const [exists, stats, decisionCount] = await Promise.all([
+      publicClient.multicall({
         allowFailure: false,
-        contracts: indexes.map((index) => ({
-          address: contractAddresses.agentRegistry,
-          abi: agentRegistryAbi,
-          functionName: "getDecision",
-          args: [BigInt(agentId), BigInt(index)],
-        })),
-      })) as DecisionResult[]);
+        contracts: [
+          {
+            address: contractAddresses.agentRegistry,
+            abi: agentRegistryAbi,
+            functionName: "exists",
+            args: [BigInt(agentId)],
+          },
+          {
+            address: contractAddresses.agentRegistry,
+            abi: agentRegistryAbi,
+            functionName: "getAgentStats",
+            args: [BigInt(agentId)],
+          },
+          {
+            address: contractAddresses.agentRegistry,
+            abi: agentRegistryAbi,
+            functionName: "getDecisionCount",
+            args: [BigInt(agentId)],
+          },
+        ],
+      }),
+    ]).then(([results]) => results as [boolean, AgentStatsResult, bigint]);
 
-  return {
-    agentId,
-    stats: {
-      totalDecisions: Number(stats.totalDecisions),
-      successfulDecisions: Number(stats.successfulDecisions),
-      blockedDecisions: Number(stats.blockedDecisions),
-      lastDecisionAt: Number(stats.lastDecisionAt),
-      cumulativePerformanceBps: stats.cumulativePerformanceBps.toString(),
-      reputationScore: Number(stats.reputationScore),
-    },
-    decisionCount: count,
-    decisions: decisions
-      .map((decision, index) => ({
-        index: indexes[index],
-        reasoningHash: decision.reasoningHash,
-        performanceBps: decision.performanceBps.toString(),
-        timestamp: Number(decision.timestamp),
-        blockedByGuardrail: decision.blockedByGuardrail,
-        detailsURI: decision.detailsURI,
-      }))
-      .reverse(),
-  };
+    if (!exists) {
+      throw new AppError(404, `Agent ${agentId} does not exist`, { agentId }, "agent_not_found");
+    }
+
+    const count = Number(decisionCount);
+    const startIndex = Math.max(0, count - Math.max(0, decisionLimit));
+    const indexes = Array.from({ length: count - startIndex }, (_, index) => startIndex + index);
+    const decisions =
+      indexes.length === 0
+        ? []
+        : ((await publicClient.multicall({
+            allowFailure: false,
+            contracts: indexes.map((index) => ({
+              address: contractAddresses.agentRegistry,
+              abi: agentRegistryAbi,
+              functionName: "getDecision",
+              args: [BigInt(agentId), BigInt(index)],
+            })),
+          })) as DecisionResult[]);
+
+    return {
+      agentId,
+      stats: {
+        totalDecisions: Number(stats.totalDecisions),
+        successfulDecisions: Number(stats.successfulDecisions),
+        blockedDecisions: Number(stats.blockedDecisions),
+        lastDecisionAt: Number(stats.lastDecisionAt),
+        cumulativePerformanceBps: stats.cumulativePerformanceBps.toString(),
+        reputationScore: Number(stats.reputationScore),
+      },
+      decisionCount: count,
+      decisions: decisions
+        .map((decision, index) => ({
+          index: indexes[index],
+          reasoningHash: decision.reasoningHash,
+          performanceBps: decision.performanceBps.toString(),
+          timestamp: Number(decision.timestamp),
+          blockedByGuardrail: decision.blockedByGuardrail,
+          detailsURI: decision.detailsURI,
+        }))
+        .reverse(),
+    };
+  });
 }
 
 export async function previewRebalance(inputTargets: StrategyTargetInput[]) {
-  const normalizedTargets = normalizeTargets(inputTargets);
-  const preview = (await publicClient.readContract({
-    address: contractAddresses.vault,
-    abi: vaultAbi,
-    functionName: "previewRebalance",
-    args: [normalizedTargets],
-  })) as PreviewResult;
+  return withRpcRead("preview_rebalance", async () => {
+    const normalizedTargets = normalizeTargets(inputTargets);
+    const preview = (await publicClient.readContract({
+      address: contractAddresses.vault,
+      abi: vaultAbi,
+      functionName: "previewRebalance",
+      args: [normalizedTargets],
+    })) as PreviewResult;
 
-  return {
-    targets: normalizedTargets,
-    preview: serializePreviewResult(preview),
-  };
+    return {
+      targets: normalizedTargets,
+      preview: serializePreviewResult(preview),
+    };
+  });
 }
 
 export async function executeRebalance(parameters: {
@@ -884,7 +908,7 @@ export async function executeRebalance(parameters: {
 
   const serializedPreview = serializePreviewResult(preview);
   if (!serializedPreview.ok) {
-    throw new AppError(409, "Rebalance preview rejected by vault guardrails", serializedPreview);
+    throw new AppError(409, "Rebalance preview rejected by vault guardrails", serializedPreview, "rebalance_preview_rejected");
   }
 
   const receipt = await writeContractAndWait({
@@ -919,7 +943,7 @@ export async function recordRejectedDecision(parameters: {
 
   const serializedPreview = serializePreviewResult(preview);
   if (serializedPreview.ok) {
-    throw new AppError(409, "Preview is valid, rejected decision cannot be recorded", serializedPreview);
+    throw new AppError(409, "Preview is valid, rejected decision cannot be recorded", serializedPreview, "rejected_decision_preview_ok");
   }
 
   const receipt = await writeContractAndWait({
@@ -977,7 +1001,12 @@ export async function updateMarketPrices(updates: PriceUpdateInput[]) {
         : null;
 
     if (normalizedPriceE18 === null) {
-      throw new AppError(400, `Price update for asset ${asset.key} requires price or priceE18`);
+      throw new AppError(
+        400,
+        `Price update for asset ${asset.key} requires price or priceE18`,
+        { assetKey: asset.key },
+        "price_payload_invalid",
+      );
     }
 
     const receipt = await writeContractAndWait({
@@ -1004,10 +1033,10 @@ export async function updateMarketPrices(updates: PriceUpdateInput[]) {
 
 export async function mintDemoAsset(input: DemoMintInput) {
   if (!env.ENABLE_DEMO_MINT) {
-    throw new AppError(403, "Demo mint endpoint is disabled");
+    throw new AppError(403, "Demo mint endpoint is disabled", undefined, "demo_mint_disabled");
   }
   if (!isAddress(input.recipient)) {
-    throw new AppError(400, "Recipient must be a valid EVM address");
+    throw new AppError(400, "Recipient must be a valid EVM address", { recipient: input.recipient }, "recipient_invalid");
   }
 
   const asset = resolveAssetDefinition(input.asset);
@@ -1019,7 +1048,7 @@ export async function mintDemoAsset(input: DemoMintInput) {
       : null;
 
   if (normalizedAmount === null) {
-    throw new AppError(400, "Mint request requires amount or amountRaw");
+    throw new AppError(400, "Mint request requires amount or amountRaw", undefined, "mint_amount_missing");
   }
 
   const receipt = await writeContractAndWait({

@@ -43,6 +43,7 @@ Dokumen ini sengaja dibuat jujur terhadap fakta lapangan. Ia membedakan dengan t
   - swap antar mock asset
   - deploy dana ke adapter mock
 - Agent logging on-chain sudah nyata via registry.
+- Model custody yang berjalan saat ini masih `single-owner vault`, belum `per-user vault factory`.
 
 ### Backend
 
@@ -126,6 +127,9 @@ Kalau dibandingkan dengan product design awal, gap utama Equinox saat ini adalah
 
 5. `Institutional gap`
    Belum ada compliance, policy controls, access model, custody model, audit posture, dan operational governance yang dibutuhkan untuk menyandang label institutional-grade.
+
+6. `Account model gap`
+   Produk akhir lebih masuk akal bila setiap user memiliki vault dan agent identity sendiri, sementara kondisi saat ini masih satu vault demo dengan satu owner.
 
 ---
 
@@ -297,6 +301,15 @@ Mengubah Equinox dari “backend action panel” menjadi sistem yang benar-benar
   - confidence summary
   - audit-friendly narrative
 - definisikan input/output contract reasoning yang jelas di dalam backend
+
+#### Vault Account Model
+
+- ubah dari `single-user managed vault demo` ke `VaultFactory`
+- targetkan:
+  - `1 user = 1 vault`
+  - `1 vault = 1 agentId`
+  - `shared backend engine`
+- pastikan decision loop tetap berjalan `per vault`, bukan secara global tanpa isolasi state
 
 #### Backend Automation
 
@@ -673,6 +686,7 @@ Kalau target berikutnya adalah membuat Equinox terlihat jauh lebih matang tanpa 
 - backend scheduler skeleton
 - data model for market snapshots and rebalance jobs
 - OpenRouter reasoning contract and prompt shape
+- VaultFactory and per-user vault architecture doc
 
 ### Week 3
 

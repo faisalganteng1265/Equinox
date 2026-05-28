@@ -102,6 +102,25 @@ Sistem ini memisahkan logika matematika off-chain yang kompleks dari penegakan k
 +-----------------------------------------------------------------+
 ```
 
+### Current vs Target Architecture
+
+Kondisi repo saat ini dan arah produk Equinox berikutnya perlu dibedakan dengan jelas:
+
+- `Current MVP`
+  - `1 deployed vault`
+  - `1 vault owner`
+  - `1 authorized backend agent`
+  - flow utama masih `single-user managed vault demo`
+
+- `Target architecture`
+  - `VaultFactory`
+  - `1 user = 1 vault`
+  - `1 vault = 1 personal agent identity`
+  - `shared backend strategy engine`
+  - `shared OpenRouter reasoning layer`
+
+Artinya, di arsitektur target nanti setiap user memiliki vault dan agent identity miliknya sendiri, tetapi perhitungan strategi dan reasoning tetap dapat dijalankan oleh backend yang sama secara `per vault`, tanpa mencampur state antar user.
+
 ### A. Layer Smart Contract (Solidity - Mantle Network)
 
 Dibangun menggunakan framework Foundry untuk menjamin keamanan tinggi dan eksekusi pengujian lokal yang komprehensif.
@@ -121,6 +140,21 @@ Mengimplementasikan standar ERC-8004 yang didukung penuh oleh Mantle untuk membe
 State: `mapping(uint256 => AgentStats) public agentRegistry` (menyimpan metrik win-rate, total transaksi, historis APY, dan skor reputasi 0-100).
 
 Fungsi `logDecision(uint256 agentId, string memory reasoningHash, bytes memory performanceData)`: Mencatat hash argumen keputusan AI secara permanen di blockchain (on-chain decision logging).
+
+**VaultFactory.sol (Target Direction):**
+
+Target evolusi berikutnya adalah factory yang memungkinkan setiap user membuat vault Equinox miliknya sendiri. Factory akan:
+
+- deploy vault baru untuk caller
+- bind `owner -> vault`
+- register atau bind `agentId`
+- menunjuk backend operator sebagai `authorizedAgent`
+
+Dengan model ini, narasi produk menjadi lebih kuat:
+
+- setiap user punya vault sendiri
+- setiap user punya AI agent identity pribadi
+- backend tetap memproses keputusan secara terpusat tetapi `per vault`
 
 ### B. Layer Backend & Reasoning Engine (Express.js & OpenRouter)
 
@@ -148,9 +182,9 @@ Skenario pembuktian aplikasi untuk Demo Day dirancang guna memperlihatkan keungg
 
 ### 1. Tahap Setup & Pendelegasian Parameter (User Interface)
 
-**Aksi:** Pengguna masuk ke dApp Equinox, menghubungkan dompet, mendepositkan modal berupa USDY, dan memilih profil risiko "Balanced".
+**Aksi:** Pengguna masuk ke dApp Equinox, menghubungkan dompet, membuat vault Equinox miliknya, mendepositkan modal berupa USDY, dan memilih profil risiko "Balanced".
 
-**On-Chain:** Sistem mencetak NFT ERC-8004 sebagai identitas agen baru yang ditugaskan khusus untuk mengelola brankas user. Kontrak mengunci batas alokasi profil Balanced secara permanen di blockchain.
+**On-Chain:** Sistem mencetak NFT ERC-8004 sebagai identitas agen baru yang ditugaskan khusus untuk mengelola brankas user. Vault baru dibind ke owner tersebut, dan kontrak mengunci batas alokasi profil Balanced secara permanen di blockchain.
 
 ### 2. Skenario Eksekusi Otonom (Normal Operation)
 

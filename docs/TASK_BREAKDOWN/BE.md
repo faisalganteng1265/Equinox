@@ -30,6 +30,7 @@ Membuat `be/` menjadi orchestration backend Equinox yang:
 - belum ada scheduler / worker loop
 - logic masih cukup terpusat di service tunggal
 - belum ada layer reasoning provider
+- belum ada registry / mapping vault per user
 - belum ada auth maturity di luar `WRITE_API_KEY`
 - belum ada observability ops-grade
 
@@ -108,9 +109,27 @@ Membuat `be/` menjadi orchestration backend Equinox yang:
 
 ---
 
+## Task 5: Per-User Vault Context
+
+### Work
+
+- siapkan data model untuk:
+  - `ownerAddress`
+  - `vaultAddress`
+  - `agentId`
+  - `riskProfile`
+- backend harus memproses strategy dan reasoning `per vault`
+- siapkan endpoint atau registry lookup untuk vault milik user tertentu
+
+### Done when
+
+- backend siap menangani banyak vault user tanpa mencampur state
+
+---
+
 ## P2: Production and Institutional Path
 
-## Task 5: Real Integration Adapters
+## Task 6: Real Integration Adapters
 
 ### Work
 
@@ -125,7 +144,7 @@ Membuat `be/` menjadi orchestration backend Equinox yang:
 
 ---
 
-## Task 6: Auth and Access Maturity
+## Task 7: Auth and Access Maturity
 
 ### Work
 
@@ -139,7 +158,7 @@ Membuat `be/` menjadi orchestration backend Equinox yang:
 
 ---
 
-## Task 7: Observability and Ops
+## Task 8: Observability and Ops
 
 ### Work
 

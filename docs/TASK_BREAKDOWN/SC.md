@@ -30,6 +30,7 @@ Membuat `sc/` menjadi smart contract layer Equinox yang:
 
 ### Yang masih tertinggal
 
+- account model per user masih belum ada
 - helper view yang lebih ramah FE/BE
 - audit-prep documentation
 - adapter interface review untuk venue nyata
@@ -39,7 +40,28 @@ Membuat `sc/` menjadi smart contract layer Equinox yang:
 
 ## P1: Contract Architecture and Audit Prep
 
-## Task 1: Frontend-Facing Read Helpers
+## Task 1: VaultFactory and Per-User Vault Model
+
+### Work
+
+- desain `VaultFactory`
+- tentukan flow:
+  - create vault
+  - bind owner
+  - bind agent identity
+  - bind authorized backend agent
+- tentukan registry/lookup minimal:
+  - `owner -> vault`
+  - `vault -> agentId`
+- pertahankan `MantleVaultOrchestrator` sebagai core vault per user
+
+### Done when
+
+- narasi `1 user = 1 vault = 1 personal agent identity` siap diimplementasikan tanpa ambiguity
+
+---
+
+## Task 2: Frontend-Facing Read Helpers
 
 ### Work
 
@@ -55,7 +77,7 @@ Membuat `sc/` menjadi smart contract layer Equinox yang:
 
 ---
 
-## Task 2: Adapter Interface Review
+## Task 3: Adapter Interface Review
 
 ### Work
 
@@ -68,7 +90,7 @@ Membuat `sc/` menjadi smart contract layer Equinox yang:
 
 ---
 
-## Task 3: Audit Prep Package
+## Task 4: Audit Prep Package
 
 ### Work
 
@@ -85,7 +107,7 @@ Membuat `sc/` menjadi smart contract layer Equinox yang:
 
 ## P2: Mainnet and Institutional Path
 
-## Task 4: Real Strategy Adapters
+## Task 5: Real Strategy Adapters
 
 ### Work
 
@@ -99,7 +121,7 @@ Membuat `sc/` menjadi smart contract layer Equinox yang:
 
 ---
 
-## Task 5: Emergency and Admin Controls
+## Task 6: Emergency and Admin Controls
 
 ### Work
 
@@ -113,7 +135,7 @@ Membuat `sc/` menjadi smart contract layer Equinox yang:
 
 ---
 
-## Task 6: External Audit Remediation Loop
+## Task 7: External Audit Remediation Loop
 
 ### Work
 

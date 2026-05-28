@@ -35,6 +35,7 @@ Ini adalah breakdown operasional dari [ROADMAP_GAP_TO_FINAL.md](C:/Users/bagas/D
 - invariant suite sudah hidup
 - gas report baseline sudah ada
 - deployment export artifact sudah ada
+- current custody model masih `single-owner vault`
 
 ### AI / Reasoning
 
@@ -42,6 +43,14 @@ Ini adalah breakdown operasional dari [ROADMAP_GAP_TO_FINAL.md](C:/Users/bagas/D
 - arah terbaru adalah `OpenRouter` untuk reasoning only
 - strategy calculation tetap berada di backend
 - reasoning nantinya dihasilkan dari backend melalui provider LLM, bukan service `ai/` terpisah
+
+### Product Direction
+
+- target berikutnya adalah `VaultFactory`
+- narasi target:
+  - `1 user = 1 vault`
+  - `1 vault = 1 personal agent identity`
+  - `shared backend engine` untuk strategy dan reasoning
 
 ---
 
@@ -60,8 +69,8 @@ Artinya, Equinox sekarang sudah melewati fase wiring awal dan masuk ke fase `P1 
 
 Urutan paling rasional setelah semua `P0` ditutup:
 
-1. `BE P1`
-   Tujuannya: split domain modules, persistence, scheduler, dan strategy loop.
+1. `SC account model + BE P1`
+   Tujuannya: definisikan `VaultFactory`, mapping vault per user, lalu split domain modules, persistence, scheduler, dan strategy loop.
 
 2. `Reasoning P1`
    Tujuannya: tambahkan `OpenRouter` reasoning layer di backend tanpa memindahkan strategy logic keluar dari `BE`.

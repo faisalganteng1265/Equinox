@@ -54,6 +54,7 @@ const envSchema = z.object({
   MANTLE_EXPLORER_URL: z.string().url().default("https://explorer.sepolia.mantle.xyz"),
   OPERATOR_PRIVATE_KEY: privateKeySchema,
   VAULT_ADDRESS: addressSchema,
+  VAULT_FACTORY_ADDRESS: addressSchema.optional(),
   AGENT_ID: integerFromString(1),
   AGENT_REGISTRY_ADDRESS: addressSchema,
   STRATEGY_REGISTRY_ADDRESS: addressSchema,
@@ -102,4 +103,5 @@ export const envBootSummary = {
   rpcTimeoutMs: env.RPC_TIMEOUT_MS,
   rpcRetryCount: env.RPC_RETRY_COUNT,
   vaultAddress: redactAddress(env.VAULT_ADDRESS),
+  vaultFactoryAddress: env.VAULT_FACTORY_ADDRESS ? redactAddress(env.VAULT_FACTORY_ADDRESS) : null,
 } as const;

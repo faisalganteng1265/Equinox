@@ -15,6 +15,7 @@ import {
   strategyRegistryAbi,
   tokenAbi,
   vaultAbi,
+  vaultFactoryAbi,
 } from "../contracts/abis.js";
 import {
   adapterDefinitionByAddress,
@@ -63,6 +64,16 @@ interface DemoMintInput {
   amountRaw?: string;
 }
 
+interface VaultContextInput {
+  owner?: string;
+  vault?: string;
+}
+
+interface CreateVaultInput {
+  owner: string;
+  agentUri?: string;
+}
+
 interface VaultAssetPolicy {
   enabled: boolean;
   riskTier: number;
@@ -105,9 +116,51 @@ interface PreviewResult {
 }
 
 const tokenMetadataCache = new Map<string, Promise<{ name: string; symbol: string; decimals: number }>>();
+const zeroAddress = "0x0000000000000000000000000000000000000000" as Address;
 
 function addressEq(left: string, right: string) {
   return left.toLowerCase() === right.toLowerCase();
+}
+
+function normalizeAddress(value: string, label: string) {
+  if (!isAddress(value)) {
+    throw new AppError(400, `${label} must be a valid EVM address`, { [label]: value }, "address_invalid");
+  }
+
+  return value as Address;
+}
+
+function requireVaultFactory() {
+  if (!contractAddresses.vaultFactory) {
+    throw new AppError(501, "Vault factory is not configured", undefined, "vault_factory_not_configured");
+  }
+
+  return contractAddresses.vaultFactory;
+}
+
+async function resolveVaultAddress(context: VaultContextInput = {}) {
+  if (context.vault) {
+    return normalizeAddress(context.vault, "vault");
+  }
+
+  if (context.owner) {
+    const owner = normalizeAddress(context.owner, "owner");
+    const factory = requireVaultFactory();
+    const vault = (await publicClient.readContract({
+      address: factory,
+      abi: vaultFactoryAbi,
+      functionName: "vaultOfOwner",
+      args: [owner],
+    })) as Address;
+
+    if (addressEq(vault, zeroAddress)) {
+      throw new AppError(404, "No Equinox vault exists for this owner", { owner, factory }, "vault_not_found");
+    }
+
+    return vault;
+  }
+
+  return contractAddresses.vault;
 }
 
 function resolveAssetDefinition(reference: string): AssetDefinition {
@@ -307,7 +360,7 @@ async function writeContractAndWait(parameters: {
   return formatReceipt(receipt);
 }
 
-async function loadAssetState(assetDefinition: AssetDefinition, totalPortfolioValueE18: bigint) {
+async function loadAssetState(assetDefinition: AssetDefinition, totalPortfolioValueE18: bigint, vaultAddress: Address) {
   const assetAddress = assetDefinition.address;
   const tokenMeta = await getTokenMetadata(assetAddress);
   const [policy, targetWeightBps, idleBalance, totalExposure, priceE18, strategyAddresses] =
@@ -315,13 +368,13 @@ async function loadAssetState(assetDefinition: AssetDefinition, totalPortfolioVa
       allowFailure: false,
       contracts: [
         {
-          address: contractAddresses.vault,
+          address: vaultAddress,
           abi: vaultAbi,
           functionName: "getAssetPolicy",
           args: [assetAddress],
         },
         {
-          address: contractAddresses.vault,
+          address: vaultAddress,
           abi: vaultAbi,
           functionName: "getAssetTargetWeight",
           args: [assetAddress],
@@ -330,10 +383,10 @@ async function loadAssetState(assetDefinition: AssetDefinition, totalPortfolioVa
           address: assetAddress,
           abi: tokenAbi,
           functionName: "balanceOf",
-          args: [contractAddresses.vault],
+          args: [vaultAddress],
         },
         {
-          address: contractAddresses.vault,
+          address: vaultAddress,
           abi: vaultAbi,
           functionName: "getCurrentAssetExposure",
           args: [assetAddress],
@@ -375,13 +428,13 @@ async function loadAssetState(assetDefinition: AssetDefinition, totalPortfolioVa
             address: strategyAddress,
             abi: strategyAdapterAbi,
             functionName: "maxWithdraw",
-            args: [contractAddresses.vault],
+            args: [vaultAddress],
           },
           {
             address: strategyAddress,
             abi: strategyAdapterAbi,
             functionName: "balanceOf",
-            args: [contractAddresses.vault],
+            args: [vaultAddress],
           },
           {
             address: strategyAddress,
@@ -389,7 +442,7 @@ async function loadAssetState(assetDefinition: AssetDefinition, totalPortfolioVa
             functionName: "latestSnapshot",
           },
           {
-            address: contractAddresses.vault,
+            address: vaultAddress,
             abi: vaultAbi,
             functionName: "getStrategyTargetWeight",
             args: [assetAddress, strategyAddress],
@@ -469,7 +522,14 @@ export async function getHealthSnapshot() {
   });
 }
 
-export async function getContractsSnapshot() {
+export async function getContractsSnapshot(context: VaultContextInput = {}) {
+  const vault = await resolveVaultAddress(context);
+  const agentId = (await publicClient.readContract({
+    address: vault,
+    abi: vaultAbi,
+    functionName: "agentId",
+  })) as bigint;
+
   return {
     chain: {
       id: env.MANTLE_CHAIN_ID,
@@ -483,11 +543,12 @@ export async function getContractsSnapshot() {
       demoMintEnabled: env.ENABLE_DEMO_MINT,
     },
     core: {
-      vault: contractAddresses.vault,
+      vault,
+      vaultFactory: contractAddresses.vaultFactory ?? null,
       exchange: contractAddresses.exchange,
       agentRegistry: contractAddresses.agentRegistry,
       strategyRegistry: contractAddresses.strategyRegistry,
-      agentId: env.AGENT_ID,
+      agentId: Number(agentId),
     },
     assets: assetDefinitions.map((asset) => ({
       key: asset.key,
@@ -506,44 +567,110 @@ export async function getContractsSnapshot() {
   };
 }
 
-export async function getVaultSnapshot() {
+export async function getVaultAccountSnapshot(ownerReference: string) {
+  return withRpcRead("vault_account_snapshot", async () => {
+    const owner = normalizeAddress(ownerReference, "owner");
+    const factory = requireVaultFactory();
+    const vault = (await publicClient.readContract({
+      address: factory,
+      abi: vaultFactoryAbi,
+      functionName: "vaultOfOwner",
+      args: [owner],
+    })) as Address;
+
+    if (addressEq(vault, zeroAddress)) {
+      return {
+        owner,
+        factory,
+        hasVault: false,
+        vault: null,
+        agentId: null,
+      };
+    }
+
+    const agentId = (await publicClient.readContract({
+      address: factory,
+      abi: vaultFactoryAbi,
+      functionName: "agentOfVault",
+      args: [vault],
+    })) as bigint;
+
+    return {
+      owner,
+      factory,
+      hasVault: true,
+      vault,
+      agentId: Number(agentId),
+    };
+  });
+}
+
+export async function createUserVault(input: CreateVaultInput) {
+  const owner = normalizeAddress(input.owner, "owner");
+  const factory = requireVaultFactory();
+  const existing = await getVaultAccountSnapshot(owner);
+  if (existing.hasVault) {
+    return {
+      ...existing,
+      created: false,
+      receipt: null,
+    };
+  }
+
+  const receipt = await writeContractAndWait({
+    address: factory,
+    abi: vaultFactoryAbi,
+    functionName: "createVaultFor",
+    args: [owner, input.agentUri ?? `equinox://agent/${owner.toLowerCase()}`],
+  });
+
+  const account = await getVaultAccountSnapshot(owner);
+  return {
+    ...account,
+    created: true,
+    receipt,
+  };
+}
+
+export async function getVaultSnapshot(context: VaultContextInput = {}) {
   return withRpcRead("vault_snapshot", async () => {
+    const vaultAddress = await resolveVaultAddress(context);
     const [owner, authorizedAgent, currentRiskProfile, paused, totalPortfolioValueE18, trackedAssets, agentId] =
       (await publicClient.multicall({
         allowFailure: false,
         contracts: [
           {
-            address: contractAddresses.vault,
+            address: vaultAddress,
             abi: vaultAbi,
             functionName: "owner",
           },
           {
-            address: contractAddresses.vault,
+            address: vaultAddress,
             abi: vaultAbi,
             functionName: "authorizedAgent",
           },
           {
-            address: contractAddresses.vault,
+            address: vaultAddress,
             abi: vaultAbi,
             functionName: "currentRiskProfile",
           },
           {
-            address: contractAddresses.vault,
+            address: vaultAddress,
             abi: vaultAbi,
             functionName: "paused",
           },
           {
-            address: contractAddresses.vault,
+            address: vaultAddress,
             abi: vaultAbi,
             functionName: "totalPortfolioValueE18",
           },
           {
-            address: contractAddresses.vault,
+            address: vaultAddress,
             abi: vaultAbi,
             functionName: "getTrackedAssets",
           },
           {
-            address: contractAddresses.vault,
+            address: vaultAddress,
             abi: vaultAbi,
             functionName: "agentId",
           },
@@ -551,7 +678,7 @@ export async function getVaultSnapshot() {
       })) as [Address, Address, number, boolean, bigint, Address[], bigint];
 
     return {
-      address: contractAddresses.vault,
+      address: vaultAddress,
       owner,
       authorizedAgent,
       paused,
@@ -565,9 +692,10 @@ export async function getVaultSnapshot() {
   });
 }
 
-export async function getPortfolioSnapshot() {
+export async function getPortfolioSnapshot(context: VaultContextInput = {}) {
   return withRpcRead("portfolio_snapshot", async () => {
-    const vault = await getVaultSnapshot();
+    const vault = await getVaultSnapshot(context);
+    const vaultAddress = vault.address as Address;
     const totalPortfolioValueE18 = BigInt(vault.totalPortfolioValueE18);
     const metadataContracts = [];
     const assetContracts = [];
@@ -596,13 +724,13 @@ export async function getPortfolioSnapshot() {
 
       assetContracts.push(
         {
-          address: contractAddresses.vault,
+          address: vaultAddress,
           abi: vaultAbi,
           functionName: "getAssetPolicy" as const,
           args: [asset.address],
         },
         {
-          address: contractAddresses.vault,
+          address: vaultAddress,
           abi: vaultAbi,
           functionName: "getAssetTargetWeight" as const,
           args: [asset.address],
@@ -611,10 +739,10 @@ export async function getPortfolioSnapshot() {
           address: asset.address,
           abi: tokenAbi,
           functionName: "balanceOf" as const,
-          args: [contractAddresses.vault],
+          args: [vaultAddress],
         },
         {
-          address: contractAddresses.vault,
+          address: vaultAddress,
           abi: vaultAbi,
           functionName: "getCurrentAssetExposure" as const,
           args: [asset.address],
@@ -648,13 +776,13 @@ export async function getPortfolioSnapshot() {
           address: adapter.address,
           abi: strategyAdapterAbi,
           functionName: "maxWithdraw" as const,
-          args: [contractAddresses.vault],
+          args: [vaultAddress],
         },
         {
           address: adapter.address,
           abi: strategyAdapterAbi,
           functionName: "balanceOf" as const,
-          args: [contractAddresses.vault],
+          args: [vaultAddress],
         },
         {
           address: adapter.address,
@@ -662,7 +790,7 @@ export async function getPortfolioSnapshot() {
           functionName: "latestSnapshot" as const,
         },
         {
-          address: contractAddresses.vault,
+          address: vaultAddress,
           abi: vaultAbi,
           functionName: "getStrategyTargetWeight" as const,
           args: [asset.address, adapter.address],
@@ -874,11 +1002,12 @@ export async function getAgentSnapshot(agentId: number, decisionLimit = 10) {
   });
 }
 
-export async function previewRebalance(inputTargets: StrategyTargetInput[]) {
+export async function previewRebalance(inputTargets: StrategyTargetInput[], context: VaultContextInput = {}) {
   return withRpcRead("preview_rebalance", async () => {
+    const vaultAddress = await resolveVaultAddress(context);
     const normalizedTargets = normalizeTargets(inputTargets);
     const preview = (await publicClient.readContract({
-      address: contractAddresses.vault,
+      address: vaultAddress,
       abi: vaultAbi,
       functionName: "previewRebalance",
       args: [normalizedTargets],
@@ -896,11 +1025,14 @@ export async function executeRebalance(parameters: {
   reasoning?: unknown;
   reasoningHash?: string;
   detailsUri?: string;
+  owner?: string;
+  vault?: string;
 }) {
+  const vaultAddress = await resolveVaultAddress(parameters);
   const normalizedTargets = normalizeTargets(parameters.targets);
   const reasoningHash = normalizeHash(parameters.reasoningHash, parameters.reasoning);
   const preview = (await publicClient.readContract({
-    address: contractAddresses.vault,
+    address: vaultAddress,
     abi: vaultAbi,
     functionName: "previewRebalance",
     args: [normalizedTargets],
@@ -912,7 +1044,7 @@ export async function executeRebalance(parameters: {
   }
 
   const receipt = await writeContractAndWait({
-    address: contractAddresses.vault,
+    address: vaultAddress,
     abi: vaultAbi,
     functionName: "executeRebalance",
     args: [normalizedTargets, reasoningHash, parameters.detailsUri ?? ""],
@@ -931,11 +1063,14 @@ export async function recordRejectedDecision(parameters: {
   reasoning?: unknown;
   reasoningHash?: string;
   detailsUri?: string;
+  owner?: string;
+  vault?: string;
 }) {
+  const vaultAddress = await resolveVaultAddress(parameters);
   const normalizedTargets = normalizeTargets(parameters.targets);
   const reasoningHash = normalizeHash(parameters.reasoningHash, parameters.reasoning);
   const preview = (await publicClient.readContract({
-    address: contractAddresses.vault,
+    address: vaultAddress,
     abi: vaultAbi,
     functionName: "previewRebalance",
     args: [normalizedTargets],
@@ -947,7 +1082,7 @@ export async function recordRejectedDecision(parameters: {
   }
 
   const receipt = await writeContractAndWait({
-    address: contractAddresses.vault,
+    address: vaultAddress,
     abi: vaultAbi,
     functionName: "recordRejectedDecision",
     args: [normalizedTargets, reasoningHash, parameters.detailsUri ?? ""],

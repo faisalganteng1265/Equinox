@@ -15,6 +15,13 @@ import { Icon } from './icons';
 
 type VaultModalMode = 'deposit' | 'withdraw';
 
+const faucetDefaultAmounts: Record<string, string> = {
+  USDY: '1000',
+  mETH: '1',
+  fBTC: '0.05',
+  MI4: '10',
+};
+
 interface GasEstimate {
   totalGasCostEth: string;
 }
@@ -671,7 +678,7 @@ export function FaucetModal({
   walletAddress?: Address;
 }) {
   const [assetKey, setAssetKey] = useState(portfolio.assets[0]?.key || 'USDY');
-  const [amount, setAmount] = useState('1000');
+  const [amount, setAmount] = useState(faucetDefaultAmounts[portfolio.assets[0]?.key || 'USDY'] || '1000');
   const [minting, setMinting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mintStatus, setMintStatus] = useState<{ label: string; explorerUrl: string } | null>(null);
@@ -728,6 +735,13 @@ export function FaucetModal({
     }
   }
 
+  function selectAsset(nextAssetKey: string) {
+    setAssetKey(nextAssetKey);
+    setAmount(faucetDefaultAmounts[nextAssetKey] || '100');
+    setMintStatus(null);
+    setError(null);
+  }
+
   return (
     <Modal onClose={onClose} width={480}>
       <ModalHeader
@@ -764,7 +778,7 @@ export function FaucetModal({
 
             <div style={{ height: 18 }} />
             <label style={{ fontSize: 12, color: 'var(--text-mute)', display: 'block', marginBottom: 8 }}>Asset</label>
-            <select value={assetKey} onChange={(event) => setAssetKey(event.target.value)} style={{ width: '100%', background: 'var(--surface-2)' }}>
+            <select value={assetKey} onChange={(event) => selectAsset(event.target.value)} style={{ width: '100%', background: 'var(--surface-2)' }}>
               {portfolio.assets.map((asset) => (
                 <option key={asset.key} value={asset.key}>
                   {asset.symbol} | {asset.displayName}

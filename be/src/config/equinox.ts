@@ -94,8 +94,8 @@ export const adapterDefinitionByAddress = new Map(
 
 export const contractAddresses = {
   vault: env.VAULT_ADDRESS,
+  vaultFactory: env.VAULT_FACTORY_ADDRESS,
   exchange: env.EXCHANGE_ADDRESS,
   agentRegistry: env.AGENT_REGISTRY_ADDRESS,
   strategyRegistry: env.STRATEGY_REGISTRY_ADDRESS,
 } as const;
-

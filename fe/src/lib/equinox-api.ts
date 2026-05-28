@@ -1,10 +1,12 @@
 import type {
   AgentSnapshotResponse,
   ContractsResponse,
+  CreateVaultResponse,
   MarketResponse,
   PortfolioResponse,
   PreviewResponse,
   RebalanceWriteResponse,
+  VaultAccountResponse,
 } from './equinox-types';
 
 const EQUINOX_API_ROOT = '/api/equinox';
@@ -47,12 +49,30 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
+function withOwner(path: string, owner?: string) {
+  if (!owner) {
+    return path;
+  }
+
+  const separator = path.includes('?') ? '&' : '?';
+  return `${path}${separator}owner=${encodeURIComponent(owner)}`;
+}
+
 export const equinoxApi = {
-  getContracts() {
-    return apiRequest<ContractsResponse>('contracts');
+  getContracts(owner?: string) {
+    return apiRequest<ContractsResponse>(withOwner('contracts', owner));
   },
-  getPortfolio() {
-    return apiRequest<PortfolioResponse>('portfolio');
+  getVaultAccount(owner: string) {
+    return apiRequest<VaultAccountResponse>(`accounts/${owner}`);
+  },
+  createVault(payload: { owner: string; agentUri?: string }) {
+    return apiRequest<CreateVaultResponse>('vaults/create', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+  getPortfolio(owner?: string) {
+    return apiRequest<PortfolioResponse>(withOwner('portfolio', owner));
   },
   getMarket() {
     return apiRequest<MarketResponse>('market');
@@ -60,7 +80,7 @@ export const equinoxApi = {
   getAgent(agentId: number) {
     return apiRequest<AgentSnapshotResponse>(`agents/${agentId}`);
   },
-  previewRebalance(payload: { targets: Array<{ asset: string; adapter?: string; weightBps: number }> }) {
+  previewRebalance(payload: { targets: Array<{ asset: string; adapter?: string; weightBps: number }>; owner?: string }) {
     return apiRequest<PreviewResponse>('rebalance/preview', {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -71,6 +91,7 @@ export const equinoxApi = {
     reasoning?: unknown;
     reasoningHash?: string;
     detailsUri?: string;
+    owner?: string;
   }) {
     return apiRequest<RebalanceWriteResponse>('rebalance/execute', {
       method: 'POST',
@@ -82,6 +103,7 @@ export const equinoxApi = {
     reasoning?: unknown;
     reasoningHash?: string;
     detailsUri?: string;
+    owner?: string;
   }) {
     return apiRequest<RebalanceWriteResponse>('rebalance/reject', {
       method: 'POST',

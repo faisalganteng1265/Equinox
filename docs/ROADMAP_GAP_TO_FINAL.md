@@ -43,7 +43,8 @@ Dokumen ini sengaja dibuat jujur terhadap fakta lapangan. Ia membedakan dengan t
   - swap antar mock asset
   - deploy dana ke adapter mock
 - Agent logging on-chain sudah nyata via registry.
-- Model custody yang berjalan saat ini masih `single-owner vault`, belum `per-user vault factory`.
+- `VaultFactory` sudah ada untuk membuat vault per user dan agent identity per user.
+- Model custody production berikutnya sudah punya jalur `1 user = 1 vault`, tetapi BE/FE masih perlu diubah agar tidak membaca satu `VAULT_ADDRESS` global.
 
 ### Backend
 
@@ -304,12 +305,16 @@ Mengubah Equinox dari “backend action panel” menjadi sistem yang benar-benar
 
 #### Vault Account Model
 
-- ubah dari `single-user managed vault demo` ke `VaultFactory`
-- targetkan:
+- `VaultFactory` smart contract sudah ditambahkan di SC
+- target yang sudah tersedia di contract:
   - `1 user = 1 vault`
   - `1 vault = 1 agentId`
   - `shared backend engine`
 - pastikan decision loop tetap berjalan `per vault`, bukan secara global tanpa isolasi state
+- pekerjaan lanjutan ada di BE/FE:
+  - resolve `vaultOfOwner(user)`
+  - index `VaultCreated`
+  - jalankan strategy/reasoning terhadap vault address user
 
 #### Backend Automation
 

@@ -14,7 +14,7 @@ Versi ini mengikuti pendekatan:
 
 Artinya seluruh flow bisa jalan penuh di `Mantle testnet` tanpa bergantung ke Aave, CIAN, atau venue live lain.
 
-Penting: implementasi kontrak yang ada saat ini masih `single-user vault`. Satu instance `MantleVaultOrchestrator` memiliki satu `owner` dan satu `authorizedAgent`.
+Penting: `MantleVaultOrchestrator` tetap single-owner per instance. Untuk banyak user, repo sekarang menyediakan `VaultFactory` yang membuat satu vault baru dan satu agent identity baru per user.
 
 ## Arah Arsitektur Berikutnya
 
@@ -25,7 +25,7 @@ Narasi produk Equinox yang ingin dituju berikutnya adalah:
 - `shared backend strategy engine`
 - `shared OpenRouter reasoning layer`
 
-Untuk mencapai itu, arah smart contract berikutnya adalah menambahkan `VaultFactory` yang:
+Untuk mencapai itu, smart contract sekarang menyediakan `VaultFactory` yang:
 
 - membuat vault baru per user
 - bind `owner -> vault`
@@ -42,8 +42,8 @@ Dengan model ini, setiap user memiliki custody, history, dan AI agent identity m
 - `src/MantleVaultOrchestrator.sol`
   Core vault per user yang mengelola custody aset, enforce risk profile, preview rebalance, record rejected decision, execute rebalance lintas aset, dan deploy dana ke strategy adapter.
 
-- `src/VaultFactory.sol` `(target direction, belum diimplementasikan)`
-  Factory untuk membuat vault baru per user dan bind agent identity milik user tersebut.
+- `src/VaultFactory.sol`
+  Factory untuk membuat vault baru per user, mint agent identity milik user tersebut, dan grant logger role ke vault baru.
 
 - `src/StrategyRegistry.sol`
   Registry adapter yang di-approve per asset.

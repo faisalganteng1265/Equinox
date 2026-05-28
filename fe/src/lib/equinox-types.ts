@@ -12,6 +12,7 @@ export interface ContractsResponse {
   };
   core: {
     vault: string;
+    vaultFactory: string | null;
     exchange: string;
     agentRegistry: string;
     strategyRegistry: string;
@@ -31,6 +32,25 @@ export interface ContractsResponse {
     address: string;
     assetKey: string;
   }>;
+}
+
+export interface VaultAccountResponse {
+  owner: string;
+  factory: string;
+  hasVault: boolean;
+  vault: string | null;
+  agentId: number | null;
+}
+
+export interface CreateVaultResponse extends VaultAccountResponse {
+  created: boolean;
+  receipt: null | {
+    transactionHash: string;
+    blockNumber: string;
+    gasUsed: string;
+    status: string;
+    explorerUrl: string;
+  };
 }
 
 export interface PortfolioResponse {

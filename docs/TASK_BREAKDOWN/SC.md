@@ -23,6 +23,8 @@ Membuat `sc/` menjadi smart contract layer Equinox yang:
 - risk guardrails
 - preview/reject/execute rebalance
 - deploy script
+- vault factory
+- per-user vault registry lookup
 - fuzz tests
 - invariant suite
 - gas report baseline
@@ -30,7 +32,6 @@ Membuat `sc/` menjadi smart contract layer Equinox yang:
 
 ### Yang masih tertinggal
 
-- account model per user masih belum ada
 - helper view yang lebih ramah FE/BE
 - audit-prep documentation
 - adapter interface review untuk venue nyata
@@ -42,22 +43,38 @@ Membuat `sc/` menjadi smart contract layer Equinox yang:
 
 ## Task 1: VaultFactory and Per-User Vault Model
 
+Status: `implemented in SC`
+
 ### Work
 
-- desain `VaultFactory`
-- tentukan flow:
+- `src/VaultFactory.sol` sudah ditambahkan
+- flow yang sudah tersedia:
   - create vault
   - bind owner
   - bind agent identity
   - bind authorized backend agent
-- tentukan registry/lookup minimal:
+- registry/lookup minimal:
   - `owner -> vault`
   - `vault -> agentId`
+- tambahan lookup:
+  - `vault -> owner`
+  - `agentId -> vault`
+  - `allVaults`
 - pertahankan `MantleVaultOrchestrator` sebagai core vault per user
+- factory mendukung:
+  - `createVault(agentURI)` untuk self-serve user
+  - `createVaultFor(owner, agentURI)` untuk admin-sponsored demo/init
 
 ### Done when
 
-- narasi `1 user = 1 vault = 1 personal agent identity` siap diimplementasikan tanpa ambiguity
+- `forge test` lulus dengan test factory
+- deploy script men-deploy factory dan grant registry roles yang dibutuhkan
+
+### Notes for BE/FE
+
+- Factory harus diberi `REGISTRAR_ROLE` dan `DEFAULT_ADMIN_ROLE` pada `MantleAgentRegistry8004` agar bisa mint agent dan grant `LOGGER_ROLE` ke vault baru.
+- BE/FE berikutnya perlu mengganti model satu `VAULT_ADDRESS` global menjadi lookup dari `VaultFactory.vaultOfOwner(user)`.
+- Event utama untuk indexing: `VaultCreated(owner, vault, agentId, agentWallet)`.
 
 ---
 

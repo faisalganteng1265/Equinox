@@ -21,7 +21,10 @@ export async function withRpcRead<T>(label: string, action: () => Promise<T>) {
       return await action();
     } catch (error) {
       lastError = error;
-      if (attempt >= env.RPC_RETRY_COUNT || !isRetryable(error)) {
+      if (!isRetryable(error)) {
+        throw error;
+      }
+      if (attempt >= env.RPC_RETRY_COUNT) {
         break;
       }
 

@@ -8,12 +8,14 @@ import { env } from "./config/env.js";
 import { AppError, toErrorResponse } from "./lib/app-error.js";
 import { logEvent } from "./lib/logger.js";
 import {
+  createUserVault,
   executeRebalance,
   getAgentSnapshot,
   getContractsSnapshot,
   getHealthSnapshot,
   getMarketSnapshot,
   getPortfolioSnapshot,
+  getVaultAccountSnapshot,
   getVaultSnapshot,
   mintDemoAsset,
   previewRebalance,
@@ -33,10 +35,19 @@ const executeSchema = z.object({
   reasoning: z.unknown().optional(),
   reasoningHash: z.string().optional(),
   detailsUri: z.string().optional(),
+  owner: z.string().optional(),
+  vault: z.string().optional(),
 });
 
 const previewSchema = z.object({
   targets: z.array(rebalanceTargetSchema).min(1),
+  owner: z.string().optional(),
+  vault: z.string().optional(),
+});
+
+const createVaultSchema = z.object({
+  owner: z.string().min(1),
+  agentUri: z.string().min(1).optional(),
 });
 
 const snapshotUpdateSchema = z.object({
@@ -77,6 +88,13 @@ function requireWriteApiKey(req: Request, _res: Response, next: NextFunction) {
   }
 
   return next();
+}
+
+function vaultContextFromQuery(req: Request) {
+  return {
+    owner: typeof req.query.owner === "string" ? req.query.owner : undefined,
+    vault: typeof req.query.vault === "string" ? req.query.vault : undefined,
+  };
 }
 
 export function createApp(): Express {
@@ -120,16 +138,37 @@ export function createApp(): Express {
     res.json(await getHealthSnapshot());
   });
 
-  app.get(`${env.API_PREFIX}/contracts`, async (_req: Request, res: Response) => {
-    res.json(await getContractsSnapshot());
+  app.get(`${env.API_PREFIX}/contracts`, async (req: Request, res: Response) => {
+    res.json(await getContractsSnapshot(vaultContextFromQuery(req)));
   });
 
-  app.get(`${env.API_PREFIX}/vault`, async (_req: Request, res: Response) => {
-    res.json(await getVaultSnapshot());
+  app.get(`${env.API_PREFIX}/accounts/:owner`, async (req: Request, res: Response) => {
+    const owner = Array.isArray(req.params.owner) ? req.params.owner[0] : req.params.owner;
+    res.json(await getVaultAccountSnapshot(owner));
   });
 
-  app.get(`${env.API_PREFIX}/portfolio`, async (_req: Request, res: Response) => {
-    res.json(await getPortfolioSnapshot());
+  app.post(`${env.API_PREFIX}/vaults/create`, requireWriteApiKey, async (req: Request, res: Response) => {
+    const payload = createVaultSchema.parse(req.body);
+    const result = await createUserVault(payload);
+
+    logEvent("info", "vault_create", {
+      requestId: getRequestId(res),
+      owner: result.owner,
+      vault: result.vault,
+      agentId: result.agentId,
+      created: result.created,
+      transactionHash: result.receipt?.transactionHash,
+    });
+
+    res.json(result);
+  });
+
+  app.get(`${env.API_PREFIX}/vault`, async (req: Request, res: Response) => {
+    res.json(await getVaultSnapshot(vaultContextFromQuery(req)));
+  });
+
+  app.get(`${env.API_PREFIX}/portfolio`, async (req: Request, res: Response) => {
+    res.json(await getPortfolioSnapshot(vaultContextFromQuery(req)));
   });
 
   app.get(`${env.API_PREFIX}/market`, async (_req: Request, res: Response) => {
@@ -151,7 +190,7 @@ export function createApp(): Express {
 
   app.post(`${env.API_PREFIX}/rebalance/preview`, async (req: Request, res: Response) => {
     const payload = previewSchema.parse(req.body);
-    const result = await previewRebalance(payload.targets);
+    const result = await previewRebalance(payload.targets, payload);
 
     logEvent("info", "rebalance_preview", {
       requestId: getRequestId(res),

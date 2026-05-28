@@ -98,29 +98,49 @@ export default function AppV2() {
   const [modal, setModal] = useState<ModalKind>(null);
   const [paused, setPaused] = useState(false);
   const [actionBusy, setActionBusy] = useState<'preview' | 'execute' | 'reject' | null>(null);
+  const [creatingVault, setCreatingVault] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [shieldAttempt, setShieldAttempt] = useState<{ asset: string; weight: number }>({ asset: 'fBTC', weight: 0.38 });
   const [localFeed, setLocalFeed] = useState<FeedEntry[]>([]);
 
+  const accountQuery = useQuery({
+    queryKey: ['equinox-account', address],
+    queryFn: () => equinoxApi.getVaultAccount(address!),
+    enabled: Boolean(address),
+    refetchInterval: 15_000,
+  });
+
+  const hasUserVault = !address || accountQuery.data?.hasVault === true;
+  const isKnownMissingVault = Boolean(address && accountQuery.data && !accountQuery.data.hasVault);
+
   const contractsQuery = useQuery({
-    queryKey: ['equinox-contracts'],
-    queryFn: () => equinoxApi.getContracts(),
+    queryKey: ['equinox-contracts', address],
+    queryFn: () => equinoxApi.getContracts(address),
+    enabled: !address || Boolean(accountQuery.data?.hasVault),
   });
 
   const portfolioQuery = useQuery({
-    queryKey: ['equinox-portfolio'],
-    queryFn: () => equinoxApi.getPortfolio(),
+    queryKey: ['equinox-portfolio', address],
+    queryFn: () => equinoxApi.getPortfolio(address),
+    enabled: Boolean(hasUserVault),
     refetchInterval: 15_000,
   });
 
   const agentQuery = useQuery({
-    queryKey: ['equinox-agent', contractsQuery.data?.core.agentId],
-    queryFn: () => equinoxApi.getAgent(contractsQuery.data!.core.agentId),
-    enabled: Boolean(contractsQuery.data?.core.agentId),
+    queryKey: ['equinox-agent', portfolioQuery.data?.vault.agentId],
+    queryFn: () => equinoxApi.getAgent(portfolioQuery.data!.vault.agentId),
+    enabled: Boolean(portfolioQuery.data?.vault.agentId),
     refetchInterval: 15_000,
   });
+
+  useEffect(() => {
+    if (isKnownMissingVault && !creatingVault) {
+      void createDemoPortfolio();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isKnownMissingVault]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -211,6 +231,7 @@ export default function AppV2() {
 
     try {
       await Promise.all([
+        accountQuery.refetch(),
         portfolioQuery.refetch(),
         agentQuery.refetch(),
         contractsQuery.refetch(),
@@ -220,7 +241,28 @@ export default function AppV2() {
     } finally {
       setRefreshing(false);
     }
-  }, [agentQuery, contractsQuery, portfolioQuery]);
+  }, [accountQuery, agentQuery, contractsQuery, portfolioQuery]);
+
+  const createDemoPortfolio = useCallback(async () => {
+    if (!address) {
+      return;
+    }
+
+    setCreatingVault(true);
+    setActionError(null);
+
+    try {
+      await equinoxApi.createVault({
+        owner: address,
+        agentUri: `equinox://demo-agent/${address.toLowerCase()}`,
+      });
+      await refreshLiveData();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'Failed to create demo portfolio.');
+    } finally {
+      setCreatingVault(false);
+    }
+  }, [address, refreshLiveData]);
 
   const triggerShield = useCallback(async () => {
     if (!contractsQuery.data) {
@@ -233,6 +275,7 @@ export default function AppV2() {
     try {
       const result = await equinoxApi.rejectRebalance({
         targets: buildBlockedTargets(contractsQuery.data),
+        owner: address,
         reasoning: {
           source: 'frontend',
           mode: 'guardrail-demo',
@@ -261,7 +304,7 @@ export default function AppV2() {
     } finally {
       setActionBusy(null);
     }
-  }, [addLocalFeed, contractsQuery.data, profile, refreshLiveData]);
+  }, [addLocalFeed, address, contractsQuery.data, profile, refreshLiveData]);
 
   const previewCurrentPlan = useCallback(async () => {
     if (!contractsQuery.data) {
@@ -274,6 +317,7 @@ export default function AppV2() {
     try {
       const preview = await equinoxApi.previewRebalance({
         targets: buildProfileTargets(contractsQuery.data, liveProfiles[profile].target),
+        owner: address,
       });
 
       addLocalFeed(buildPreviewFeed(preview, profile));
@@ -289,7 +333,7 @@ export default function AppV2() {
     } finally {
       setActionBusy(null);
     }
-  }, [addLocalFeed, contractsQuery.data, liveProfiles, profile]);
+  }, [addLocalFeed, address, contractsQuery.data, liveProfiles, profile]);
 
   const executeCurrentPlan = useCallback(async () => {
     if (!contractsQuery.data) {
@@ -302,6 +346,7 @@ export default function AppV2() {
     try {
       const result = await equinoxApi.executeRebalance({
         targets: buildProfileTargets(contractsQuery.data, liveProfiles[profile].target),
+        owner: address,
         reasoning: {
           source: 'frontend',
           mode: 'execute-profile',
@@ -328,7 +373,7 @@ export default function AppV2() {
     }
   }, [addLocalFeed, address, contractsQuery.data, liveProfiles, profile, refreshLiveData]);
 
-  const bootError = contractsQuery.error || portfolioQuery.error || agentQuery.error;
+  const bootError = accountQuery.error || contractsQuery.error || (isKnownMissingVault ? null : portfolioQuery.error || agentQuery.error);
   if (bootError) {
     return (
       <FullscreenStatus
@@ -340,11 +385,30 @@ export default function AppV2() {
     );
   }
 
-  if (contractsQuery.isLoading || portfolioQuery.isLoading || agentQuery.isLoading) {
+  if (contractsQuery.isLoading || (address && accountQuery.isLoading) || portfolioQuery.isLoading || agentQuery.isLoading) {
     return (
       <FullscreenStatus
         title="Loading Mantle Sepolia portfolio"
         body="Reading contract addresses, vault balances, strategy adapters, and agent registry state."
+      />
+    );
+  }
+
+  if (isKnownMissingVault) {
+    if (actionError) {
+      return (
+        <FullscreenStatus
+          tone="error"
+          title="Vault creation failed"
+          body={actionError}
+          onRetry={() => void createDemoPortfolio()}
+        />
+      );
+    }
+    return (
+      <FullscreenStatus
+        title="Setting up your portfolio"
+        body="Creating a vault and agent identity for this wallet on Mantle Sepolia."
       />
     );
   }

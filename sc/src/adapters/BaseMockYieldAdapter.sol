@@ -13,6 +13,8 @@ import {MarketSnapshot, VenueType} from "../common/Types.sol";
 import {IMintableBurnableERC20} from "../interfaces/IMintableBurnableERC20.sol";
 import {IStrategyAdapter} from "../interfaces/IStrategyAdapter.sol";
 
+/// @title Base Mock Yield Adapter
+/// @notice Shared accounting and yield-accrual logic for simulated Equinox strategy venues.
 abstract contract BaseMockYieldAdapter is AccessControl, Pausable, ReentrancyGuard, IStrategyAdapter {
     using SafeERC20 for IERC20;
 

@@ -13,6 +13,8 @@ import {RiskProfile, StrategyTarget} from "../src/common/Types.sol";
 import {MockAssetToken} from "../src/mocks/MockAssetToken.sol";
 import {EquinoxVaultFixture} from "./utils/EquinoxVaultFixture.sol";
 
+/// @title Vault Handler
+/// @notice Stateful helper used by invariant tests to exercise bounded user and agent actions.
 contract VaultHandler is Test {
     MantleVaultOrchestrator internal immutable vault;
     StrategyRegistry internal immutable strategyRegistry;
@@ -103,6 +105,8 @@ contract VaultHandler is Test {
     }
 }
 
+/// @title Mantle Vault Orchestrator Invariant Test
+/// @notice Invariant suite for target-weight consistency and persistent policy configuration.
 contract MantleVaultOrchestratorInvariantTest is EquinoxVaultFixture {
     VaultHandler internal handler;
 

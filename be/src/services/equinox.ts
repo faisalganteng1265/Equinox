@@ -84,15 +84,15 @@ interface AdapterSnapshot {
   apyBps: number;
   riskScore: number;
   liquidityScore: number;
-  sourceTimestamp: number;
+  sourceTimestamp: bigint;
   sourceHash: Hex;
 }
 
 interface AgentStatsResult {
-  totalDecisions: number;
-  successfulDecisions: number;
-  blockedDecisions: number;
-  lastDecisionAt: number;
+  totalDecisions: bigint;
+  successfulDecisions: bigint;
+  blockedDecisions: bigint;
+  lastDecisionAt: bigint;
   cumulativePerformanceBps: bigint;
   reputationScore: number;
 }
@@ -100,7 +100,7 @@ interface AgentStatsResult {
 interface DecisionResult {
   reasoningHash: Hex;
   performanceBps: bigint;
-  timestamp: number;
+  timestamp: bigint;
   blockedByGuardrail: boolean;
   detailsURI: string;
 }

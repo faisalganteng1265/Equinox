@@ -144,6 +144,6 @@ describe("Equinox API smoke tests", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.preview.ok).toBe(true);
-    expect(serviceMocks.previewRebalance).toHaveBeenCalledWith(payload.targets);
+    expect(serviceMocks.previewRebalance).toHaveBeenCalledWith(payload.targets, payload);
   });
 });

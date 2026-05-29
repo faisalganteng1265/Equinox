@@ -3,6 +3,8 @@ pragma solidity 0.8.23;
 
 import {MarketSnapshot, VenueType} from "../common/Types.sol";
 
+/// @title Strategy Adapter Interface
+/// @notice Unified adapter surface used by the Equinox vault and strategy registry.
 interface IStrategyAdapter {
     /// @notice Returns the asset managed by the adapter.
     /// @return assetAddress Managed ERC20 asset address.

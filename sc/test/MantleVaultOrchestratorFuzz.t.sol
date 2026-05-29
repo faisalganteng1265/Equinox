@@ -6,6 +6,8 @@ import {MockIdleAdapter} from "../src/adapters/MockIdleAdapter.sol";
 import {PreviewResult, RebalanceRejectionReason, StrategyTarget} from "../src/common/Types.sol";
 import {EquinoxVaultFixture} from "./utils/EquinoxVaultFixture.sol";
 
+/// @title Mantle Vault Orchestrator Fuzz Test
+/// @notice Fuzz coverage for preview validation, rejection logging, and withdraw edge cases.
 contract MantleVaultOrchestratorFuzzTest is EquinoxVaultFixture {
     /// @notice Boots the shared Equinox vault fixture.
     function setUp() public {

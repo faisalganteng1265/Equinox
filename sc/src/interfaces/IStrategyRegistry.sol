@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
+/// @title Strategy Registry Interface
+/// @notice Registry interface used by the vault and factory to validate approved adapters.
 interface IStrategyRegistry {
     /// @notice Returns whether an adapter is approved for an asset.
     /// @param asset Asset address to query.

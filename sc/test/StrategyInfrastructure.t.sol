@@ -7,6 +7,8 @@ import {MockAssetExchange} from "../src/MockAssetExchange.sol";
 import {MockDeFiLendingAdapter} from "../src/adapters/MockDeFiLendingAdapter.sol";
 import {MockAssetToken} from "../src/mocks/MockAssetToken.sol";
 
+/// @title Strategy Infrastructure Test
+/// @notice Isolated tests for the mock exchange and adapter primitives.
 contract StrategyInfrastructureTest is Test {
     MockAssetToken internal usdy;
     MockAssetToken internal mEth;

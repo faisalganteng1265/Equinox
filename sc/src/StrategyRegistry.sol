@@ -8,6 +8,8 @@ import {InvalidStrategyAsset, ZeroAddress} from "./common/Errors.sol";
 import {IStrategyAdapter} from "./interfaces/IStrategyAdapter.sol";
 import {IStrategyRegistry} from "./interfaces/IStrategyRegistry.sol";
 
+/// @title Equinox Strategy Registry
+/// @notice Access-controlled registry that approves strategy adapters per supported asset.
 contract StrategyRegistry is AccessControl, IStrategyRegistry {
     using EnumerableSet for EnumerableSet.AddressSet;
 

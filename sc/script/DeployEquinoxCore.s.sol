@@ -15,7 +15,10 @@ import {MockIdleAdapter} from "../src/adapters/MockIdleAdapter.sol";
 import {RiskProfile} from "../src/common/Types.sol";
 import {MockAssetToken} from "../src/mocks/MockAssetToken.sol";
 
+/// @title Deploy Equinox Core
+/// @notice Foundry deployment script for the full Equinox mock stack on Mantle testnet environments.
 contract DeployEquinoxCore is Script {
+    /// @notice Bundle of core contracts deployed before vault and factory bootstrap.
     struct CoreContracts {
         MockAssetToken usdy;
         MockAssetToken mEth;
@@ -112,6 +115,10 @@ contract DeployEquinoxCore is Script {
         console2.log("Agent ID:", agentId);
     }
 
+    /// @notice Deploys the token, exchange, registry, and adapter contracts used by Equinox.
+    /// @param deployer Address receiving initial admin rights.
+    /// @param authorizedAgent Address granted operator permissions across the stack.
+    /// @return core In-memory bundle of deployed core contracts.
     function _deployCoreContracts(address deployer, address authorizedAgent)
         internal
         returns (CoreContracts memory core)
@@ -136,6 +143,8 @@ contract DeployEquinoxCore is Script {
         _registerStrategies(core);
     }
 
+    /// @notice Grants mint and burn permissions required by the mock exchange and adapters.
+    /// @param core Bundle of already deployed core contracts.
     function _grantTokenRoles(CoreContracts memory core) internal {
         core.usdy.grantRole(core.usdy.MINTER_ROLE(), address(core.exchange));
         core.usdy.grantRole(core.usdy.BURNER_ROLE(), address(core.exchange));
@@ -152,6 +161,9 @@ contract DeployEquinoxCore is Script {
         core.mi4.grantRole(core.mi4.MINTER_ROLE(), address(core.mi4Defi));
     }
 
+    /// @notice Grants backend operator permissions to the exchange and adapters.
+    /// @param core Bundle of already deployed core contracts.
+    /// @param authorizedAgent Backend-controlled operator address.
     function _grantOperatorRoles(CoreContracts memory core, address authorizedAgent) internal {
         core.exchange.grantRole(core.exchange.OPERATOR_ROLE(), authorizedAgent);
         core.usdyIdle.grantRole(core.usdyIdle.OPERATOR_ROLE(), authorizedAgent);
@@ -160,6 +172,8 @@ contract DeployEquinoxCore is Script {
         core.mi4Defi.grantRole(core.mi4Defi.OPERATOR_ROLE(), authorizedAgent);
     }
 
+    /// @notice Registers the default approved adapter for each supported asset.
+    /// @param core Bundle of already deployed core contracts.
     function _registerStrategies(CoreContracts memory core) internal {
         core.strategyRegistry.registerStrategy(address(core.usdy), address(core.usdyIdle));
         core.strategyRegistry.registerStrategy(address(core.mEth), address(core.mEthDefi));
@@ -167,6 +181,16 @@ contract DeployEquinoxCore is Script {
         core.strategyRegistry.registerStrategy(address(core.mi4), address(core.mi4Defi));
     }
 
+    /// @notice Deploys the many-user vault factory with cloned policy defaults.
+    /// @param registry Agent registry used by the factory.
+    /// @param strategyRegistry Strategy registry referenced by new vaults.
+    /// @param exchange Mock exchange referenced by new vaults.
+    /// @param authorizedAgent Shared backend agent address.
+    /// @param agentWallet Shared agent wallet metadata value.
+    /// @param assets Supported asset addresses copied into the factory.
+    /// @param riskTiers Asset risk tiers copied into the factory.
+    /// @param maxAllocationBps Per-asset allocation caps copied into the factory.
+    /// @return vaultFactory Address of the deployed vault factory.
     function _deployVaultFactory(
         MantleAgentRegistry8004 registry,
         StrategyRegistry strategyRegistry,
@@ -195,6 +219,12 @@ contract DeployEquinoxCore is Script {
         registry.grantRole(registry.REGISTRAR_ROLE(), vaultFactory);
     }
 
+    /// @notice Seeds deterministic bootstrap prices into the mock exchange.
+    /// @param exchange Exchange receiving the prices.
+    /// @param usdy USDY token address.
+    /// @param mEth mETH token address.
+    /// @param fBtc fBTC token address.
+    /// @param mi4 MI4 token address.
     function _setInitialPrices(MockAssetExchange exchange, address usdy, address mEth, address fBtc, address mi4)
         internal
     {
@@ -204,6 +234,11 @@ contract DeployEquinoxCore is Script {
         exchange.setAssetPrice(mi4, vm.envOr("MI4_PRICE_E18", uint256(150e18)));
     }
 
+    /// @notice Seeds initial APY, risk, and liquidity snapshots into the adapters.
+    /// @param usdyIdle Idle adapter for USDY.
+    /// @param mEthDefi DeFi lending adapter for mETH.
+    /// @param fBtcCefi CeFi earn adapter for fBTC.
+    /// @param mi4Defi DeFi lending adapter for MI4.
     function _setInitialSnapshots(
         MockIdleAdapter usdyIdle,
         MockDeFiLendingAdapter mEthDefi,

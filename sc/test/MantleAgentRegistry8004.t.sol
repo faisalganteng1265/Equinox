@@ -7,6 +7,8 @@ import {MantleAgentRegistry8004} from "../src/MantleAgentRegistry8004.sol";
 import {AgentStats, DecisionRecord} from "../src/common/Types.sol";
 import {EmptyReasoningHash, UnauthorizedRegistryManager, ZeroAddress} from "../src/common/Errors.sol";
 
+/// @title Mantle Agent Registry Test
+/// @notice Unit tests for agent registration, metadata updates, and decision logging.
 contract MantleAgentRegistry8004Test is Test {
     MantleAgentRegistry8004 internal registry;
 

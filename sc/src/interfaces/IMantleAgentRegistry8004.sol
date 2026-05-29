@@ -3,6 +3,8 @@ pragma solidity 0.8.23;
 
 import {AgentStats, DecisionRecord} from "../common/Types.sol";
 
+/// @title Mantle Agent Registry Interface
+/// @notice Minimal agent-registry surface consumed by the vault and factory.
 interface IMantleAgentRegistry8004 {
     /// @notice Returns whether an agent identity exists in the registry.
     /// @param agentId Agent identifier to query.

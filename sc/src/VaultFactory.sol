@@ -11,6 +11,8 @@ import {RiskProfile} from "./common/Types.sol";
 import {IMockAssetExchange} from "./interfaces/IMockAssetExchange.sol";
 import {IStrategyRegistry} from "./interfaces/IStrategyRegistry.sol";
 
+/// @title Equinox Vault Factory
+/// @notice Deploys one personal vault and one agent identity per user while sharing backend orchestration.
 contract VaultFactory is Ownable, Pausable {
     MantleAgentRegistry8004 public immutable agentRegistry;
     IStrategyRegistry public immutable strategyRegistry;

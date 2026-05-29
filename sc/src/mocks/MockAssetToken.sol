@@ -7,6 +7,8 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ZeroAddress} from "../common/Errors.sol";
 import {IMintableBurnableERC20} from "../interfaces/IMintableBurnableERC20.sol";
 
+/// @title Equinox Mock Asset Token
+/// @notice Role-gated ERC20 used to simulate RWA and yield assets on Mantle testnet.
 contract MockAssetToken is ERC20, AccessControl, IMintableBurnableERC20 {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");

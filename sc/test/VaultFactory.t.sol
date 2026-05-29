@@ -7,12 +7,15 @@ import {VaultAlreadyExists, ZeroAddress} from "../src/common/Errors.sol";
 import {DecisionRecord, RiskProfile, StrategyTarget} from "../src/common/Types.sol";
 import {EquinoxVaultFixture} from "./utils/EquinoxVaultFixture.sol";
 
+/// @title Vault Factory Test
+/// @notice Covers per-user vault creation and logging flows through the Equinox factory.
 contract VaultFactoryTest is EquinoxVaultFixture {
     VaultFactory internal factory;
 
     address internal userA = makeAddr("userA");
     address internal userB = makeAddr("userB");
 
+    /// @notice Boots the shared fixture and deploys a factory using the fixture defaults.
     function setUp() public {
         _setUpVaultFixture();
 
@@ -33,6 +36,7 @@ contract VaultFactoryTest is EquinoxVaultFixture {
         vm.stopPrank();
     }
 
+    /// @notice Verifies that self-service creation binds owner, vault, and agent identity correctly.
     function test_createVault_mintsUserAgentAndDeploysOwnedVault() public {
         vm.prank(userA);
         (address userVaultAddress, uint256 userAgentId) = factory.createVault("ipfs://agent-user-a");
@@ -55,6 +59,7 @@ contract VaultFactoryTest is EquinoxVaultFixture {
         assertTrue(registry.hasRole(registry.LOGGER_ROLE(), userVaultAddress));
     }
 
+    /// @notice Verifies that the admin can sponsor a vault for another user.
     function test_createVaultFor_allowsAdminSponsoredUserVault() public {
         vm.prank(admin);
         (address userVaultAddress, uint256 userAgentId) = factory.createVaultFor(userB, "ipfs://agent-user-b");
@@ -64,6 +69,7 @@ contract VaultFactoryTest is EquinoxVaultFixture {
         assertEq(MantleVaultOrchestrator(userVaultAddress).owner(), userB);
     }
 
+    /// @notice Verifies that the factory rejects a second vault for the same owner.
     function test_createVault_revertsWhenOwnerAlreadyHasVault() public {
         vm.prank(userA);
         (address userVaultAddress,) = factory.createVault("ipfs://agent-user-a");
@@ -73,12 +79,14 @@ contract VaultFactoryTest is EquinoxVaultFixture {
         factory.createVault("ipfs://agent-user-a-duplicate");
     }
 
+    /// @notice Verifies that zero-address sponsored owners are rejected.
     function test_createVaultFor_revertsForZeroOwner() public {
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSelector(ZeroAddress.selector));
         factory.createVaultFor(address(0), "ipfs://agent-zero");
     }
 
+    /// @notice Verifies that a factory-created vault can execute and log a rebalance decision.
     function test_factoryVaultCanLogRebalanceDecision() public {
         vm.prank(userA);
         (address userVaultAddress, uint256 userAgentId) = factory.createVault("ipfs://agent-user-a");

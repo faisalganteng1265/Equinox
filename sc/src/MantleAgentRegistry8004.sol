@@ -10,6 +10,8 @@ import {AgentStats, DecisionRecord} from "./common/Types.sol";
 import {EmptyReasoningHash, UnauthorizedRegistryManager, ZeroAddress} from "./common/Errors.sol";
 import {IMantleAgentRegistry8004} from "./interfaces/IMantleAgentRegistry8004.sol";
 
+/// @title Mantle Agent Registry 8004
+/// @notice ERC721-based registry that tracks Equinox agent identities, wallets, and decision history.
 contract MantleAgentRegistry8004 is ERC721URIStorage, AccessControl, Pausable, IMantleAgentRegistry8004 {
     bytes32 public constant REGISTRAR_ROLE = keccak256("REGISTRAR_ROLE"); // Dedicated role for minting and updating agents.
     bytes32 public constant LOGGER_ROLE = keccak256("LOGGER_ROLE"); // Dedicated role for decision and performance logging.

@@ -19,6 +19,8 @@ import {
 import {IMockAssetExchange} from "./interfaces/IMockAssetExchange.sol";
 import {IMintableBurnableERC20} from "./interfaces/IMintableBurnableERC20.sol";
 
+/// @title Equinox Mock Asset Exchange
+/// @notice Deterministic price-based swap venue for simulated asset rotation in testnet flows.
 contract MockAssetExchange is AccessControl, Pausable, ReentrancyGuard, IMockAssetExchange {
     using SafeERC20 for IERC20;
 

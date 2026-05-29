@@ -13,6 +13,8 @@ import {MockIdleAdapter} from "../../src/adapters/MockIdleAdapter.sol";
 import {RiskProfile} from "../../src/common/Types.sol";
 import {MockAssetToken} from "../../src/mocks/MockAssetToken.sol";
 
+/// @title Equinox Vault Fixture
+/// @notice Shared fixture that boots the standard Equinox mock stack for unit, fuzz, and invariant tests.
 abstract contract EquinoxVaultFixture is Test {
     MantleAgentRegistry8004 public registry;
     MantleVaultOrchestrator public vault;

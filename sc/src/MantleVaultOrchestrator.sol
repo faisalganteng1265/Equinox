@@ -36,6 +36,8 @@ import {IMockAssetExchange} from "./interfaces/IMockAssetExchange.sol";
 import {IStrategyAdapter} from "./interfaces/IStrategyAdapter.sol";
 import {IStrategyRegistry} from "./interfaces/IStrategyRegistry.sol";
 
+/// @title Equinox Vault Orchestrator
+/// @notice Single-owner smart vault that enforces risk guardrails and executes strategy allocations.
 contract MantleVaultOrchestrator is Ownable2Step, Pausable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 

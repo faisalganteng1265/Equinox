@@ -20,6 +20,8 @@ import {
 } from "../src/common/Types.sol";
 import {MockAssetToken} from "../src/mocks/MockAssetToken.sol";
 
+/// @title Mantle Vault Orchestrator Test
+/// @notice Unit tests for deposit, withdraw, preview, and rebalance behavior inside the Equinox vault.
 contract MantleVaultOrchestratorTest is Test {
     MantleAgentRegistry8004 internal registry;
     MantleVaultOrchestrator internal vault;

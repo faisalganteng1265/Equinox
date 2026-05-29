@@ -9,6 +9,12 @@ Backend ini adalah orchestration layer untuk `Equinox` di `Mantle Sepolia`.
 - sign write actions untuk agent/operator dengan `viem`
 - optional demo mint untuk top up mock asset di testnet
 
+## ABI Source
+
+- ABI yang dipakai backend disimpan lokal di `be/src/contracts/abis.ts`
+- backend tidak lagi import artifact dari `sc/out`
+- jadi `pnpm dev:be` tidak tergantung hasil `forge build` lokal
+
 ## Setup
 
 1. Copy env:

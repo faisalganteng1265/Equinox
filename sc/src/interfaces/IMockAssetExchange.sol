@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
+/// @title Mock Asset Exchange Interface
+/// @notice Minimal mock-exchange surface used by the Equinox vault and factory.
 interface IMockAssetExchange {
     /// @notice Returns the configured mock price for an asset.
     /// @param asset Asset address to query.

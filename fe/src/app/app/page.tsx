@@ -428,7 +428,7 @@ export default function AppV2() {
 
   return (
     <>
-      <div className="shell">
+      <div className="shell" style={{ paddingBottom: 88 }}>
         <V2TopBar
           walletSlot={(
             <>
@@ -574,7 +574,7 @@ export default function AppV2() {
         ) : null}
       </div>
 
-      <div style={{ position: 'sticky', bottom: 0, zIndex: 40, background: 'var(--ink)' }}>
+      <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 40, background: 'var(--ink)' }}>
         <DecisionTape entries={deferredFeed.slice(0, 12)} />
       </div>
 

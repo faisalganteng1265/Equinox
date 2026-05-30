@@ -125,7 +125,7 @@ export function BottleCard({ asset }: { asset: Asset }) {
         }}>
           <svg viewBox="0 0 1200 32" preserveAspectRatio="none" style={{ width: '100%', height: '100%', display: 'block' }}>
             <path
-              d="M0,16 C150,4 300,28 600,16 C900,4 1050,28 1200,16 L1200,32 L0,32 Z"
+              d="M0,17 C70,3 135,31 205,17 C275,3 340,31 410,17 C480,3 545,31 615,17 C685,3 750,31 820,17 C890,3 955,31 1025,17 C1095,3 1130,31 1200,17 L1200,32 L0,32 Z"
               fill={`color-mix(in srgb, ${asset.color} 86%, var(--paper) 14%)`}
             />
           </svg>
@@ -143,7 +143,7 @@ export function BottleCard({ asset }: { asset: Asset }) {
         }}>
           <svg viewBox="0 0 1200 20" preserveAspectRatio="none" style={{ width: '100%', height: '100%', display: 'block' }}>
             <path
-              d="M0,10 C150,20 300,0 600,10 C900,20 1050,0 1200,10 L1200,20 L0,20 Z"
+              d="M0,10 C60,20 120,0 180,10 C240,20 300,0 360,10 C420,20 480,0 540,10 C600,20 660,0 720,10 C780,20 840,0 900,10 C960,20 1020,0 1080,10 C1140,20 1170,0 1200,10 L1200,20 L0,20 Z"
               fill={`color-mix(in srgb, ${asset.color} 68%, var(--paper) 32%)`}
             />
           </svg>

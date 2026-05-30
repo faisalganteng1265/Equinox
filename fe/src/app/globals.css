@@ -183,6 +183,7 @@ input:focus, select:focus { border-color: var(--accent); }
 @keyframes dash-flow  { to { stroke-dashoffset: -32; } }
 @keyframes ticker     { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 @keyframes spin       { to { transform: rotate(360deg); } }
+@keyframes wave-flow  { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 
 .fadein  { animation: fadein 280ms ease both; }
 .slidein { animation: slide-up 480ms cubic-bezier(.2,.7,.2,1) both; }

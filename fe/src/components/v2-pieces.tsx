@@ -9,21 +9,7 @@ export function BottleCard({ asset }: { asset: Asset }) {
   const usd = asset.balance * asset.price;
   return (
     <div className="bottle">
-      <div
-        style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          height: `${fillPct}%`,
-          background: `linear-gradient(180deg,
-          color-mix(in srgb, ${asset.color} 25%, transparent),
-          color-mix(in srgb, ${asset.color} 10%, transparent))`,
-          borderTop: `1px solid color-mix(in srgb, ${asset.color} 45%, transparent)`,
-          transition: 'height 800ms cubic-bezier(.2,.7,.2,1)',
-        }}
-      />
-
+      {/* Tick marks */}
       <div
         style={{
           position: 'absolute',
@@ -31,6 +17,7 @@ export function BottleCard({ asset }: { asset: Asset }) {
           top: 0,
           bottom: 0,
           width: 4,
+          zIndex: 2,
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
@@ -45,7 +32,8 @@ export function BottleCard({ asset }: { asset: Asset }) {
         ))}
       </div>
 
-      <div style={{ position: 'relative', padding: '16px 16px 10px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+      {/* Header */}
+      <div style={{ position: 'relative', zIndex: 2, padding: '16px 16px 10px', display: 'flex', flexDirection: 'column', gap: 4 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6 }}>
           <div>
             <div className="display italic" style={{ fontSize: 24, lineHeight: 1, color: 'var(--paper)' }}>{asset.sym}</div>
@@ -72,20 +60,22 @@ export function BottleCard({ asset }: { asset: Asset }) {
 
       <div style={{ flex: 1 }} />
 
-      <div style={{ position: 'relative', padding: '12px 16px 14px' }}>
-        <div className="eyebrow" style={{ color: 'var(--paper-2)' }}>Net APY</div>
+      {/* Bottom info */}
+      <div style={{ position: 'relative', zIndex: 2, padding: '12px 16px 14px' }}>
+        <div className="eyebrow" style={{ color: 'var(--paper)' }}>Net APY</div>
         <div
           className="display italic"
           style={{
             fontSize: 36,
             lineHeight: 1,
-            color: asset.color,
+            color: 'var(--paper)',
             marginTop: 4,
             letterSpacing: '-0.02em',
+            textShadow: '0 1px 10px rgba(0,0,0,0.28)',
           }}
         >
           {asset.apy.toFixed(2)}
-          <span style={{ fontSize: 18, color: 'var(--paper-3)', fontFamily: 'var(--font-ui)', fontStyle: 'normal' }}>%</span>
+          <span style={{ fontSize: 18, color: 'var(--paper)', fontFamily: 'var(--font-ui)', fontStyle: 'normal' }}>%</span>
         </div>
 
         <div className="rule" style={{ margin: '12px 0 10px' }} />
@@ -98,13 +88,65 @@ export function BottleCard({ asset }: { asset: Asset }) {
             <div className="eyebrow" style={{ marginTop: 2 }}>allocation</div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div className="mono" style={{ fontSize: 13, color: 'var(--paper-2)' }}>
+            <div className="mono" style={{ fontSize: 13, color: 'var(--paper)', fontWeight: 500 }}>
               ${(usd / 1000).toFixed(1)}k
             </div>
             <div className="eyebrow" style={{ marginTop: 2 }}>
               {asset.balance.toLocaleString(undefined, { maximumFractionDigits: asset.sym === 'fBTC' ? 4 : 1 })}
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Liquid fill */}
+      <div
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 1,
+          height: `${fillPct}%`,
+          transition: 'height 800ms cubic-bezier(.2,.7,.2,1)',
+          background: `linear-gradient(180deg,
+            color-mix(in srgb, ${asset.color} 74%, var(--paper) 26%),
+            ${asset.color})`,
+        }}
+      >
+        {/* Primary wave */}
+        <div style={{
+          position: 'absolute',
+          top: -16,
+          left: 0,
+          width: '200%',
+          height: 32,
+          animation: 'wave-flow 3.6s linear infinite',
+          pointerEvents: 'none',
+        }}>
+          <svg viewBox="0 0 1200 32" preserveAspectRatio="none" style={{ width: '100%', height: '100%', display: 'block' }}>
+            <path
+              d="M0,16 C150,4 300,28 600,16 C900,4 1050,28 1200,16 L1200,32 L0,32 Z"
+              fill={`color-mix(in srgb, ${asset.color} 86%, var(--paper) 14%)`}
+            />
+          </svg>
+        </div>
+        {/* Secondary wave */}
+        <div style={{
+          position: 'absolute',
+          top: -10,
+          left: 0,
+          width: '200%',
+          height: 20,
+          animation: 'wave-flow 2.4s linear infinite reverse',
+          opacity: 0.65,
+          pointerEvents: 'none',
+        }}>
+          <svg viewBox="0 0 1200 20" preserveAspectRatio="none" style={{ width: '100%', height: '100%', display: 'block' }}>
+            <path
+              d="M0,10 C150,20 300,0 600,10 C900,20 1050,0 1200,10 L1200,20 L0,20 Z"
+              fill={`color-mix(in srgb, ${asset.color} 68%, var(--paper) 32%)`}
+            />
+          </svg>
         </div>
       </div>
     </div>

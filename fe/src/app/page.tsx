@@ -181,35 +181,43 @@ function Nav() {
 
 function Hero() {
   return (
-    <section style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', paddingTop: 64, position: 'relative', overflow: 'hidden' }}>
-
-      {/* Dot-grid background */}
+    <section className="landing-hero" style={{
+      minHeight: 'calc(100vh - 48px)',
+      display: 'flex',
+      alignItems: 'center',
+      paddingTop: 64,
+      paddingBottom: 72,
+      position: 'relative',
+      overflow: 'hidden',
+      backgroundImage: 'url(/equinox-hero-engine.png)',
+      backgroundSize: 'cover',
+      backgroundPosition: 'center right',
+      backgroundRepeat: 'no-repeat',
+    }}>
       <div style={{
-        position: 'absolute', inset: 0, pointerEvents: 'none',
-        backgroundImage: 'radial-gradient(circle, color-mix(in srgb, var(--paper) 15%, transparent) 1px, transparent 1px)',
-        backgroundSize: '40px 40px',
-        maskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 20%, transparent 80%)',
-        opacity: 0.35,
-      }} />
-
-      {/* Large ambient glow */}
-      <div style={{
-        position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%, -50%)',
-        width: 800, height: 800,
-        background: 'radial-gradient(circle, color-mix(in srgb, var(--accent) 10%, transparent), transparent 65%)',
+        position: 'absolute',
+        inset: 0,
         pointerEvents: 'none',
+        background: [
+          'linear-gradient(90deg, var(--ink) 0%, color-mix(in srgb, var(--ink) 92%, transparent) 30%, color-mix(in srgb, var(--ink) 38%, transparent) 68%, var(--ink) 100%)',
+          'linear-gradient(180deg, color-mix(in srgb, var(--ink) 68%, transparent) 0%, transparent 24%, color-mix(in srgb, var(--ink) 72%, transparent) 100%)',
+        ].join(', '),
+      }} />
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        pointerEvents: 'none',
+        boxShadow: 'inset 0 -90px 110px var(--ink), inset 0 90px 100px color-mix(in srgb, var(--ink) 72%, transparent)',
       }} />
 
-      <div style={{ ...shell, position: 'relative', textAlign: 'center', width: '100%' }}>
+      <div style={{ ...shell, position: 'relative', width: '100%' }}>
 
-        {/* Eyebrow */}
         <div className="hero-eyebrow" style={{
-          display: 'inline-flex', alignItems: 'center', gap: 12, marginBottom: 40,
-          padding: '6px 16px', border: '1px solid var(--rule)', borderRadius: 999,
+          display: 'inline-flex', alignItems: 'center', gap: 12, marginBottom: 28,
           fontSize: 11, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase',
-          color: 'var(--paper-3)',
+          color: 'var(--accent)',
         }}>
-          <span style={{ color: 'var(--accent)' }}>●</span>
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', boxShadow: '0 0 18px var(--accent)' }} />
           Equinox RWA
           <span style={{ opacity: 0.4 }}>×</span>
           Mantle Network
@@ -217,30 +225,27 @@ function Hero() {
           ERC-8004
         </div>
 
-        {/* Main headline */}
-        <h1 className="hero-title display italic" style={{
-          fontSize: 'clamp(52px, 8vw, 104px)',
+        <h1 className="hero-title landing-hero-title display italic" style={{
+          fontSize: 'var(--landing-hero-title-size, 104px)',
           lineHeight: 0.98,
-          letterSpacing: '-0.032em',
-          margin: '0 0 32px',
+          letterSpacing: '-0.02em',
+          margin: '0 0 26px',
           color: 'var(--paper)',
+          maxWidth: 680,
+          textShadow: '0 24px 80px rgba(0,0,0,0.7)',
         }}>
-          The Institutional-Grade<br />
-          <em style={{ color: 'var(--accent)' }}>DeFAI Portfolio Engine</em><br />
-          for Mantle.
+          Equinox<span style={{ color: 'var(--accent)' }}>.</span>RWA
         </h1>
 
-        {/* Subline */}
         <p className="hero-sub" style={{
           fontSize: 18, lineHeight: 1.75, color: 'var(--paper-2)',
-          maxWidth: 560, margin: '0 auto 48px',
+          maxWidth: 560, margin: '0 0 42px',
+          textShadow: '0 12px 36px rgba(0,0,0,0.65)',
         }}>
-          AI-native yield management across RWA, DeFi, and CeFi.
-          Risk-adjusted. On-chain verified. Blockchain enforced.
+          Institutional-grade DeFAI portfolio engine for Mantle. Autonomous yield management across RWA, DeFi, and CeFi with on-chain agent reputation and enforceable risk guardrails.
         </p>
 
-        {/* CTAs */}
-        <div className="hero-ctas" style={{ display: 'flex', gap: 14, justifyContent: 'center', marginBottom: 80 }}>
+        <div className="hero-ctas" style={{ display: 'flex', gap: 14, marginBottom: 58, flexWrap: 'wrap' }}>
           <Link href="/app" style={{
             display: 'inline-flex', alignItems: 'center', gap: 10,
             height: 52, padding: '0 28px', borderRadius: 10,
@@ -268,11 +273,10 @@ function Hero() {
           </a>
         </div>
 
-        {/* Stat bar */}
         <div className="hero-stats" style={{
-          display: 'inline-flex', border: '1px solid var(--rule)', borderRadius: 14,
-          overflow: 'hidden', background: 'color-mix(in srgb, var(--ink-2) 60%, transparent)',
-          backdropFilter: 'blur(12px)',
+          display: 'flex',
+          gap: 30,
+          flexWrap: 'wrap',
         }}>
           {[
             { v: '4', label: 'Asset Classes' },
@@ -281,18 +285,18 @@ function Hero() {
             { v: 'Mantle', label: 'Target Network' },
           ].map((s, i) => (
             <div key={i} style={{
-              padding: '18px 28px', textAlign: 'center',
-              borderRight: i < 3 ? '1px solid var(--rule)' : undefined,
+              minWidth: 104,
+              paddingLeft: i > 0 ? 22 : 0,
+              borderLeft: i > 0 ? '1px solid color-mix(in srgb, var(--paper) 14%, transparent)' : undefined,
             }}>
-              <div className="num" style={{ fontSize: 22, fontWeight: 600, color: 'var(--paper)', letterSpacing: '-0.02em' }}>{s.v}</div>
+              <div className="num" style={{ fontSize: 22, fontWeight: 600, color: 'var(--paper)', letterSpacing: '-0.02em', textShadow: '0 12px 30px rgba(0,0,0,0.7)' }}>{s.v}</div>
               <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--paper-4)', marginTop: 4 }}>{s.label}</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Scroll indicator */}
-      <div style={{ position: 'absolute', bottom: 36, left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+      <div style={{ position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
         <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--paper-4)' }}>Scroll</span>
         <div style={{ width: 1, height: 44, background: 'linear-gradient(to bottom, var(--paper-4), transparent)' }} />
       </div>

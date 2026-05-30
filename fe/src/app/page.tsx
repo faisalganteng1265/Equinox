@@ -325,7 +325,7 @@ function CapitalTopologySection() {
   }
 
   return (
-    <section id="architecture" style={{ padding: '120px 0 100px', borderTop: '1px solid var(--rule)' }}>
+    <section id="architecture" className="landing-overlap-section" style={{ padding: '120px 0 100px', borderTop: '1px solid var(--rule)' }}>
       <div style={shell}>
 
         {/* Section header */}
@@ -993,8 +993,10 @@ export default function LandingPage() {
   return (
     <div ref={rootRef} style={{ background: 'var(--ink)', minHeight: '100vh', color: 'var(--paper)' }}>
       <Nav />
-      <Hero />
-      <CapitalTopologySection />
+      <div className="landing-intro-stack">
+        <Hero />
+        <CapitalTopologySection />
+      </div>
       <ProblemSection />
       <FeatureSection />
       <HowItWorksSection />

@@ -392,10 +392,26 @@ svg { display: block; }
 
 .landing-hero {
   --landing-hero-title-size: 104px;
+  position: sticky !important;
+  top: 0;
+  z-index: 0;
+  min-height: 100vh !important;
 }
 
 .landing-hero .landing-hero-title {
   font-size: var(--landing-hero-title-size) !important;
+}
+
+.landing-intro-stack {
+  position: relative;
+  isolation: isolate;
+}
+
+.landing-overlap-section {
+  position: relative;
+  z-index: 2;
+  background: var(--ink);
+  box-shadow: 0 -80px 120px var(--ink);
 }
 
 @media (max-width: 1100px) {

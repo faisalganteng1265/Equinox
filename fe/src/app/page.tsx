@@ -38,6 +38,7 @@ const FEATURES = [
     body: 'Simultaneously optimizes across mETH, USDY, fBTC, and MI4 — Mantle\'s four power assets. No single-asset blinders.',
     accent: '#B4A0FF',
     icon: '⊞',
+    image: '/feature-cross-asset.png',
   },
   {
     num: '02',
@@ -45,6 +46,7 @@ const FEATURES = [
     body: 'Every AI agent minted as an on-chain NFT. Win rates, drawdowns, and APY history recorded immutably. Trust is earned on-chain.',
     accent: '#9DEFC0',
     icon: '◈',
+    image: '/feature-agent-reputation.png',
   },
   {
     num: '03',
@@ -52,6 +54,7 @@ const FEATURES = [
     body: 'Automatically moves assets between Mantle DeFi protocols and Bybit CeFi Earn when rate differentials justify the bridge.',
     accent: '#F5C76B',
     icon: '⇌',
+    image: '/feature-cross-world-bridge.png',
   },
   {
     num: '04',
@@ -59,6 +62,7 @@ const FEATURES = [
     body: 'Smart contracts enforce your chosen risk profile. Any deviation — even from the AI — is rejected at the blockchain level.',
     accent: '#F09A82',
     icon: '⊗',
+    image: '/feature-risk-guardrails.png',
   },
 ];
 
@@ -714,16 +718,40 @@ function FeatureSection() {
   const [hovered, setHovered] = useState<number | null>(null);
 
   const cardBase = (f: typeof FEATURES[0], i: number, extra?: React.CSSProperties): React.CSSProperties => ({
-    borderRadius: 16,
+    borderRadius: 0,
     border: `1px solid ${f.accent}${hovered === i ? '50' : '1E'}`,
-    background: `color-mix(in srgb, ${f.accent} ${hovered === i ? '6%' : '3%'}, var(--ink-2))`,
+    background: '#000',
     position: 'relative',
     overflow: 'hidden',
     cursor: 'default',
-    transition: 'border-color 280ms, background 280ms, transform 300ms cubic-bezier(.2,.7,.2,1)',
+    transition: 'border-color 280ms, transform 300ms cubic-bezier(.2,.7,.2,1)',
     transform: hovered === i ? 'translateY(-4px)' : 'none',
     ...extra,
   });
+
+  const featureAsset = (
+    f: typeof FEATURES[0],
+    i: number,
+    style: React.CSSProperties,
+  ) => (
+    <div style={{
+      position: 'absolute',
+      pointerEvents: 'none',
+      transition: 'opacity 300ms, transform 360ms cubic-bezier(.2,.7,.2,1)',
+      opacity: hovered === i ? 0.78 : 0.54,
+      transform: hovered === i ? 'scale(1.035)' : 'scale(1)',
+      filter: 'saturate(1.1) contrast(1.08)',
+      ...style,
+    }}>
+      <Image
+        src={f.image}
+        alt=""
+        fill
+        sizes="(max-width: 900px) 80vw, 520px"
+        style={{ objectFit: 'contain', mixBlendMode: 'screen' }}
+      />
+    </div>
+  );
 
   return (
     <section style={{ padding: '120px 0', borderTop: '1px solid var(--rule)' }}>
@@ -756,17 +784,7 @@ function FeatureSection() {
             onMouseEnter={() => setHovered(0)}
             onMouseLeave={() => setHovered(null)}
           >
-            {/* Large decorative icon — floats right */}
-            <div style={{
-              position: 'absolute', right: 36, top: '50%', transform: 'translateY(-50%)',
-              fontSize: 88, lineHeight: 1,
-              color: FEATURES[0].accent,
-              opacity: hovered === 0 ? 0.22 : 0.09,
-              transition: 'opacity 300ms',
-              pointerEvents: 'none', userSelect: 'none',
-            }}>
-              {FEATURES[0].icon}
-            </div>
+            {featureAsset(FEATURES[0], 0, { right: -34, top: 18, width: '48%', height: '86%' })}
             {/* Corner glow */}
             <div style={{
               position: 'absolute', top: -50, left: -50, width: 220, height: 220, borderRadius: '50%',
@@ -779,13 +797,13 @@ function FeatureSection() {
               background: `linear-gradient(to right, ${FEATURES[0].accent}90, transparent)`,
             }} />
 
-            <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', color: FEATURES[0].accent, textTransform: 'uppercase', marginBottom: 'auto', paddingBottom: 40 }}>
+            <div style={{ position: 'relative', zIndex: 1, fontSize: 11, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', color: FEATURES[0].accent, textTransform: 'uppercase', marginBottom: 'auto', paddingBottom: 40 }}>
               {FEATURES[0].num}
             </div>
-            <h3 className="display italic" style={{ fontSize: 'clamp(26px, 2.8vw, 38px)', margin: '0 0 14px', color: 'var(--paper)', letterSpacing: '-0.02em', lineHeight: 1.1, maxWidth: '65%' }}>
+            <h3 className="display italic" style={{ position: 'relative', zIndex: 1, fontSize: 'clamp(26px, 2.8vw, 38px)', margin: '0 0 14px', color: 'var(--paper)', letterSpacing: '-0.02em', lineHeight: 1.1, maxWidth: '65%' }}>
               {FEATURES[0].title}
             </h3>
-            <p style={{ fontSize: 14, color: 'var(--paper-3)', lineHeight: 1.8, margin: 0, maxWidth: '60%' }}>
+            <p style={{ position: 'relative', zIndex: 1, fontSize: 14, color: 'var(--paper-3)', lineHeight: 1.8, margin: 0, maxWidth: '58%' }}>
               {FEATURES[0].body}
             </p>
           </div>
@@ -808,16 +826,15 @@ function FeatureSection() {
               transition: 'background 300ms', pointerEvents: 'none',
             }} />
 
-            <div style={{ fontSize: 36, marginBottom: 'auto', paddingBottom: 32, color: FEATURES[1].accent, opacity: hovered === 1 ? 0.9 : 0.6, transition: 'opacity 280ms' }}>
-              {FEATURES[1].icon}
-            </div>
-            <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', color: FEATURES[1].accent, textTransform: 'uppercase', marginBottom: 14 }}>
+            {featureAsset(FEATURES[1], 1, { right: -32, top: 16, width: '58%', height: '58%', opacity: hovered === 1 ? 0.68 : 0.44 })}
+            <div style={{ position: 'relative', zIndex: 1, marginBottom: 'auto', paddingBottom: 96 }} />
+            <div style={{ position: 'relative', zIndex: 1, fontSize: 11, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', color: FEATURES[1].accent, textTransform: 'uppercase', marginBottom: 14 }}>
               {FEATURES[1].num}
             </div>
-            <h3 className="display italic" style={{ fontSize: 'clamp(20px, 2.2vw, 28px)', margin: '0 0 12px', color: 'var(--paper)', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
+            <h3 className="display italic" style={{ position: 'relative', zIndex: 1, fontSize: 'clamp(20px, 2.2vw, 28px)', margin: '0 0 12px', color: 'var(--paper)', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
               {FEATURES[1].title}
             </h3>
-            <p style={{ fontSize: 14, color: 'var(--paper-3)', lineHeight: 1.75, margin: 0 }}>
+            <p style={{ position: 'relative', zIndex: 1, fontSize: 14, color: 'var(--paper-3)', lineHeight: 1.75, margin: 0 }}>
               {FEATURES[1].body}
             </p>
           </div>
@@ -840,16 +857,15 @@ function FeatureSection() {
               transition: 'background 300ms', pointerEvents: 'none',
             }} />
 
-            <div style={{ fontSize: 36, marginBottom: 'auto', paddingBottom: 32, color: FEATURES[2].accent, opacity: hovered === 2 ? 0.9 : 0.6, transition: 'opacity 280ms' }}>
-              {FEATURES[2].icon}
-            </div>
-            <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', color: FEATURES[2].accent, textTransform: 'uppercase', marginBottom: 14 }}>
+            {featureAsset(FEATURES[2], 2, { left: -46, top: 12, width: '62%', height: '58%', opacity: hovered === 2 ? 0.66 : 0.42 })}
+            <div style={{ position: 'relative', zIndex: 1, marginBottom: 'auto', paddingBottom: 100 }} />
+            <div style={{ position: 'relative', zIndex: 1, fontSize: 11, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', color: FEATURES[2].accent, textTransform: 'uppercase', marginBottom: 14 }}>
               {FEATURES[2].num}
             </div>
-            <h3 className="display italic" style={{ fontSize: 'clamp(20px, 2.2vw, 28px)', margin: '0 0 12px', color: 'var(--paper)', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
+            <h3 className="display italic" style={{ position: 'relative', zIndex: 1, fontSize: 'clamp(20px, 2.2vw, 28px)', margin: '0 0 12px', color: 'var(--paper)', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
               {FEATURES[2].title}
             </h3>
-            <p style={{ fontSize: 14, color: 'var(--paper-3)', lineHeight: 1.75, margin: 0 }}>
+            <p style={{ position: 'relative', zIndex: 1, fontSize: 14, color: 'var(--paper-3)', lineHeight: 1.75, margin: 0 }}>
               {FEATURES[2].body}
             </p>
           </div>
@@ -861,17 +877,7 @@ function FeatureSection() {
             onMouseEnter={() => setHovered(3)}
             onMouseLeave={() => setHovered(null)}
           >
-            {/* Large decorative icon — floats left */}
-            <div style={{
-              position: 'absolute', left: 36, top: '50%', transform: 'translateY(-50%)',
-              fontSize: 88, lineHeight: 1,
-              color: FEATURES[3].accent,
-              opacity: hovered === 3 ? 0.22 : 0.09,
-              transition: 'opacity 300ms',
-              pointerEvents: 'none', userSelect: 'none',
-            }}>
-              {FEATURES[3].icon}
-            </div>
+            {featureAsset(FEATURES[3], 3, { left: -22, top: 10, width: '48%', height: '90%' })}
             {/* Corner glow */}
             <div style={{
               position: 'absolute', bottom: -50, right: -50, width: 220, height: 220, borderRadius: '50%',
@@ -885,7 +891,7 @@ function FeatureSection() {
             }} />
 
             {/* Content pushed to the right side for the wide card */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', textAlign: 'right', height: '100%' }}>
+            <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', textAlign: 'right', height: '100%' }}>
               <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', color: FEATURES[3].accent, textTransform: 'uppercase', marginBottom: 'auto', paddingBottom: 40 }}>
                 {FEATURES[3].num}
               </div>

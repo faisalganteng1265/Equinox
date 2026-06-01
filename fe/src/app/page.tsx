@@ -1085,48 +1085,6 @@ function RiskSection() {
   );
 }
 
-// ── Tech Stack ─────────────────────────────────────────────────────────
-
-function TechStackSection() {
-  const tech = [
-    { name: 'Mantle Network', desc: 'Target Network', color: '#9DEFC0' },
-    { name: 'ERC-8004', desc: 'Agent Standard', color: '#B4A0FF' },
-    { name: 'Bybit API', desc: 'CeFi Bridge', color: '#F5C76B' },
-    { name: 'Aave V3', desc: 'Lending Protocol', color: '#B4A0FF' },
-    { name: 'CIAN Vaults', desc: 'Yield Strategy', color: '#F09A82' },
-    { name: 'OpenRouter', desc: 'AI Reasoning', color: '#7EBDF2' },
-    { name: 'Viem', desc: 'Web3 Engine', color: '#9DEFC0' },
-    { name: 'Foundry', desc: 'Smart Contracts', color: '#F5C76B' },
-  ];
-
-  return (
-    <section style={{ padding: '80px 0', borderTop: '1px solid var(--rule)', borderBottom: '1px solid var(--rule)' }}>
-      <div style={shell}>
-        <div style={{ textAlign: 'center', marginBottom: 48 }}>
-          <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--paper-4)' }}>
-            Built on the best
-          </div>
-        </div>
-        <div className="reveal-stagger" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
-          {tech.map((t, i) => (
-            <div key={i} className="stagger-item" style={{
-              padding: '12px 20px', borderRadius: 10, border: '1px solid var(--rule)',
-              background: 'var(--ink-2)', display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center',
-              minWidth: 120, transition: 'border-color 200ms',
-            }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = t.color + '55'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--rule)'; }}
-            >
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--paper)' }}>{t.name}</div>
-              <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: t.color, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{t.desc}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
 // ── Footer CTA ─────────────────────────────────────────────────────────
 
 function FooterCTA() {
@@ -1254,7 +1212,7 @@ export default function LandingPage() {
         section3Video.pause();
         section3Video.currentTime = 0.01;
 
-        let pauseTimer: ReturnType<typeof window.setTimeout> | undefined;
+        let pauseTimer: number | undefined;
         let section3Active = false;
 
         ScrollTrigger.create({
@@ -1343,7 +1301,6 @@ export default function LandingPage() {
         <FeatureSection />
         <HowItWorksSection />
         <RiskSection />
-        <TechStackSection />
         <FooterCTA />
       </div>
     </div>

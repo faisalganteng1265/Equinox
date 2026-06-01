@@ -278,11 +278,11 @@ function Section3VideoBackground() {
   return (
     <div className="landing-section3-video-bg" aria-hidden="true">
       <video
-        autoPlay
         muted
         loop
         playsInline
-        preload="metadata"
+        preload="auto"
+        className="landing-section3-scroll-video"
       >
         <source src="/section3.mp4" type="video/mp4" />
       </video>
@@ -1185,6 +1185,8 @@ export default function LandingPage() {
 
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger);
+    let removeSection3VideoMetadataListener: (() => void) | undefined;
+    let removeSection3ScrollListener: (() => void) | undefined;
 
     const ctx = gsap.context(() => {
       // Hero entrance animations
@@ -1239,6 +1241,61 @@ export default function LandingPage() {
         anticipatePin: 1,
       });
 
+      const section3Video = document.querySelector<HTMLVideoElement>('.landing-section3-scroll-video');
+      const section3Wrap = document.querySelector<HTMLElement>('.landing-section3-onward');
+      if (section3Video && section3Wrap) {
+        section3Video.load();
+        section3Video.pause();
+        section3Video.currentTime = 0.01;
+
+        let pauseTimer: ReturnType<typeof window.setTimeout> | undefined;
+        let section3Active = false;
+
+        ScrollTrigger.create({
+          trigger: section3Wrap,
+          start: 'top bottom',
+          end: 'bottom top',
+          onEnter: () => { section3Active = true; },
+          onEnterBack: () => { section3Active = true; },
+          onLeave: () => {
+            section3Active = false;
+            section3Video.pause();
+          },
+          onLeaveBack: () => {
+            section3Active = false;
+            section3Video.pause();
+          },
+        });
+
+        const playWhileScrolling = () => {
+          if (!section3Active) return;
+
+          void section3Video.play().catch(() => undefined);
+          if (pauseTimer) window.clearTimeout(pauseTimer);
+          pauseTimer = window.setTimeout(() => {
+            section3Video.pause();
+          }, 130);
+        };
+
+        window.addEventListener('scroll', playWhileScrolling, { passive: true });
+        removeSection3ScrollListener = () => {
+          window.removeEventListener('scroll', playWhileScrolling);
+          if (pauseTimer) window.clearTimeout(pauseTimer);
+        };
+
+        if (section3Video.readyState >= 1) {
+          section3Video.currentTime = 0.01;
+        } else {
+          const setInitialSection3VideoTime = () => {
+            section3Video.currentTime = 0.01;
+          };
+          section3Video.addEventListener('loadedmetadata', setInitialSection3VideoTime, { once: true });
+          removeSection3VideoMetadataListener = () => {
+            section3Video.removeEventListener('loadedmetadata', setInitialSection3VideoTime);
+          };
+        }
+      }
+
       // Scroll-triggered single reveals
       gsap.utils.toArray<Element>('.reveal').forEach((el) => {
         gsap.from(el, {
@@ -1257,7 +1314,11 @@ export default function LandingPage() {
       });
     }, rootRef);
 
-    return () => ctx.revert();
+    return () => {
+      removeSection3VideoMetadataListener?.();
+      removeSection3ScrollListener?.();
+      ctx.revert();
+    };
   }, []);
 
   return (

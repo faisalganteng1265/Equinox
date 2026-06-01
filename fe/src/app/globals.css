@@ -392,9 +392,7 @@ svg { display: block; }
 
 .landing-hero {
   --landing-hero-title-size: 104px;
-  position: sticky !important;
-  top: 0;
-  z-index: 0;
+  position: relative;
   min-height: 100vh !important;
 }
 
@@ -407,11 +405,35 @@ svg { display: block; }
   isolation: isolate;
 }
 
+.landing-app-preview {
+  position: absolute;
+  left: 50%;
+  top: 100vh;
+  z-index: 3;
+  width: min(1320px, calc(100% - 48px));
+  aspect-ratio: 1844 / 967;
+  border: 0;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--ink-2);
+  box-shadow:
+    0 34px 100px rgba(0,0,0,0.68);
+  transform: translate(-50%, -50%) perspective(1200px) rotateX(12deg) scale(0.94);
+  transform-origin: center bottom;
+  will-change: transform;
+}
+
+.landing-app-preview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .landing-overlap-section {
+  --landing-architecture-pad-top: 460px;
   position: relative;
-  z-index: 2;
   background: var(--ink);
-  box-shadow: 0 -80px 120px var(--ink);
 }
 
 @media (max-width: 1100px) {
@@ -426,6 +448,14 @@ svg { display: block; }
   .landing-hero {
     background-position: 62% center !important;
     --landing-hero-title-size: 76px;
+  }
+
+  .landing-app-preview {
+    width: calc(100% - 32px);
+  }
+
+  .landing-overlap-section {
+    --landing-architecture-pad-top: 380px;
   }
 
   .top {
@@ -462,6 +492,14 @@ svg { display: block; }
     --landing-hero-title-size: 58px;
   }
 
+  .landing-app-preview {
+    top: 92vh;
+  }
+
+  .landing-overlap-section {
+    --landing-architecture-pad-top: 300px;
+  }
+
   .asset-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -470,6 +508,15 @@ svg { display: block; }
 @media (max-width: 520px) {
   .landing-hero {
     --landing-hero-title-size: 44px;
+  }
+
+  .landing-app-preview {
+    width: calc(100% - 20px);
+    border-radius: 10px;
+  }
+
+  .landing-overlap-section {
+    --landing-architecture-pad-top: 230px;
   }
 
   .asset-grid {

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
@@ -189,11 +190,26 @@ function Hero() {
       paddingBottom: 72,
       position: 'relative',
       overflow: 'hidden',
-      backgroundImage: 'url(/equinox-hero-engine.png)',
-      backgroundSize: 'cover',
-      backgroundPosition: 'center right',
-      backgroundRepeat: 'no-repeat',
     }}>
+      <video
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          objectPosition: 'center',
+          pointerEvents: 'none',
+        }}
+      >
+        <source src="/landingpage.mp4" type="video/mp4" />
+      </video>
       <div style={{
         position: 'absolute',
         inset: 0,
@@ -210,7 +226,7 @@ function Hero() {
         boxShadow: 'inset 0 -90px 110px var(--ink), inset 0 90px 100px color-mix(in srgb, var(--ink) 72%, transparent)',
       }} />
 
-      <div style={{ ...shell, position: 'relative', width: '100%' }}>
+      <div style={{ ...shell, position: 'relative', width: '100%', transform: 'translateY(-36px)' }}>
 
         <div className="hero-eyebrow" style={{
           display: 'inline-flex', alignItems: 'center', gap: 12, marginBottom: 28,
@@ -304,6 +320,20 @@ function Hero() {
   );
 }
 
+function LaunchAppPreview() {
+  return (
+    <div className="landing-app-preview">
+      <Image
+        src="/image.png"
+        alt="Equinox launch app dashboard"
+        width={1844}
+        height={967}
+        priority
+      />
+    </div>
+  );
+}
+
 // ── Capital Topology Mock ──────────────────────────────────────────────
 
 function CapitalTopologySection() {
@@ -325,7 +355,7 @@ function CapitalTopologySection() {
   }
 
   return (
-    <section id="architecture" className="landing-overlap-section" style={{ padding: '120px 0 100px', borderTop: '1px solid var(--rule)' }}>
+    <section id="architecture" className="landing-overlap-section" style={{ padding: 'var(--landing-architecture-pad-top, 400px) 0 100px', borderTop: '1px solid var(--rule)' }}>
       <div style={shell}>
 
         {/* Section header */}
@@ -969,6 +999,26 @@ export default function LandingPage() {
         y: 16, opacity: 0, duration: 0.9, ease: 'power2.out', delay: 0.95,
       });
 
+      gsap.set('.landing-app-preview', {
+        xPercent: -50,
+        yPercent: -50,
+        transformPerspective: 1200,
+        transformOrigin: 'center bottom',
+        rotationX: 12,
+        scale: 0.94,
+      });
+      gsap.to('.landing-app-preview', {
+        scrollTrigger: {
+          trigger: '.landing-intro-stack',
+          start: 'top top',
+          end: '+=520',
+          scrub: 0.8,
+        },
+        rotationX: 0,
+        scale: 1,
+        ease: 'none',
+      });
+
       // Scroll-triggered single reveals
       gsap.utils.toArray<Element>('.reveal').forEach((el) => {
         gsap.from(el, {
@@ -995,6 +1045,7 @@ export default function LandingPage() {
       <Nav />
       <div className="landing-intro-stack">
         <Hero />
+        <LaunchAppPreview />
         <CapitalTopologySection />
       </div>
       <ProblemSection />

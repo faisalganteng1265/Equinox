@@ -461,10 +461,46 @@ svg { display: block; }
   z-index: 1;
 }
 
+.landing-section3-onward {
+  position: relative;
+  z-index: 2;
+  isolation: isolate;
+}
+
+.landing-section3-onward > section {
+  position: relative;
+  z-index: 1;
+  background: transparent !important;
+}
+
+.landing-section3-video-bg {
+  position: sticky;
+  top: 0;
+  z-index: 0;
+  height: 100vh;
+  margin-bottom: -100vh;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--ink);
+}
+
+.landing-section3-video-bg video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.landing-section3-video-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, var(--ink) 0%, color-mix(in srgb, var(--ink) 64%, transparent) 18%, color-mix(in srgb, var(--ink) 58%, transparent) 74%, var(--ink) 100%),
+    linear-gradient(90deg, color-mix(in srgb, var(--ink) 76%, transparent) 0%, transparent 45%, color-mix(in srgb, var(--ink) 72%, transparent) 100%);
+}
+
 .landing-problem-section {
   position: relative;
   z-index: 2;
-  background: var(--ink);
   box-shadow: 0 -80px 120px var(--ink);
 }
 

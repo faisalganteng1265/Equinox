@@ -274,6 +274,23 @@ function LaunchAppPreview() {
   );
 }
 
+function Section3VideoBackground() {
+  return (
+    <div className="landing-section3-video-bg" aria-hidden="true">
+      <video
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="metadata"
+      >
+        <source src="/section3.mp4" type="video/mp4" />
+      </video>
+      <div className="landing-section3-video-overlay" />
+    </div>
+  );
+}
+
 // ── Capital Topology Mock ──────────────────────────────────────────────
 
 function CapitalTopologySection() {
@@ -1004,13 +1021,16 @@ export default function LandingPage() {
       </div>
       <div className="landing-section-2-3-stack">
         <CapitalTopologySection />
-        <ProblemSection />
       </div>
-      <FeatureSection />
-      <HowItWorksSection />
-      <RiskSection />
-      <TechStackSection />
-      <FooterCTA />
+      <div className="landing-section3-onward">
+        <Section3VideoBackground />
+        <ProblemSection />
+        <FeatureSection />
+        <HowItWorksSection />
+        <RiskSection />
+        <TechStackSection />
+        <FooterCTA />
+      </div>
     </div>
   );
 }

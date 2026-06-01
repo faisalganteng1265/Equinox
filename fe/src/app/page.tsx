@@ -555,36 +555,153 @@ function CapitalTopologySection() {
 // ── Problem Section ────────────────────────────────────────────────────
 
 function ProblemSection() {
+  const [hovered, setHovered] = useState<number | null>(null);
+
   return (
     <section className="landing-problem-section" style={{ padding: '120px 0', borderTop: '1px solid var(--rule)' }}>
       <div style={shell}>
-        <div className="reveal" style={{ marginBottom: 72 }}>
-          <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--paper-4)', marginBottom: 16 }}>
-            The Yield Problem
+
+        {/* Asymmetric two-column header */}
+        <div className="reveal" style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: '0 64px',
+          alignItems: 'flex-end',
+          marginBottom: 80,
+        }}>
+          <div>
+            <div style={{
+              fontSize: 11, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em',
+              textTransform: 'uppercase', color: 'var(--paper-4)', marginBottom: 20,
+            }}>
+              The Yield Problem
+            </div>
+            <h2 className="display italic" style={{
+              fontSize: 'clamp(40px, 5.5vw, 68px)', lineHeight: 1.0,
+              letterSpacing: '-0.025em', margin: 0,
+            }}>
+              Four failures of<br />
+              <em style={{ color: 'var(--negative)' }}>DeFi yield today.</em>
+            </h2>
           </div>
-          <h2 className="display italic" style={{ fontSize: 'clamp(36px, 5vw, 62px)', lineHeight: 1.05, letterSpacing: '-0.025em', margin: 0, maxWidth: 560 }}>
-            Four failures of<br />
-            <em style={{ color: 'var(--negative)' }}>DeFi yield today.</em>
-          </h2>
+          <p style={{
+            fontSize: 15, color: 'var(--paper-3)', lineHeight: 1.85,
+            margin: 0, paddingBottom: 6,
+          }}>
+            Today&apos;s yield infrastructure is broken. Siloed assets, opaque AI, rigid on-chain
+            logic, and unconstrained risk chasing — four failures Equinox was built to solve.
+          </p>
         </div>
 
-        <div className="reveal-stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
+        {/* Full-width editorial rows */}
+        <div className="reveal-stagger">
           {PROBLEMS.map((p, i) => (
-            <div key={i} className="stagger-item" style={{
-              padding: '40px 36px', border: '1px solid var(--rule)',
-              background: 'var(--ink-2)',
-              borderRadius: i === 0 ? '12px 0 0 0' : i === 1 ? '0 12px 0 0' : i === 2 ? '0 0 0 12px' : '0 0 12px 0',
-              transition: 'background 200ms',
-              cursor: 'default',
-            }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--ink-3)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--ink-2)'; }}
+            <div
+              key={i}
+              className="stagger-item"
+              onMouseEnter={() => setHovered(i)}
+              onMouseLeave={() => setHovered(null)}
+              style={{
+                position: 'relative',
+                borderTop: '1px solid var(--rule)',
+                padding: '52px 0 52px 24px',
+                display: 'grid',
+                gridTemplateColumns: '60px 1fr 320px 28px',
+                gap: '0 32px',
+                alignItems: 'center',
+                cursor: 'default',
+                overflow: 'hidden',
+                background: hovered === i
+                  ? 'color-mix(in srgb, var(--negative) 4%, transparent)'
+                  : 'transparent',
+                transition: 'background 350ms',
+              }}
             >
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--paper-4)', letterSpacing: '0.1em', marginBottom: 20 }}>{p.n}</div>
-              <h3 style={{ fontSize: 20, fontFamily: 'var(--font-display)', fontStyle: 'italic', margin: '0 0 14px', color: 'var(--paper)', letterSpacing: '-0.01em' }}>{p.title}</h3>
-              <p style={{ fontSize: 14, color: 'var(--paper-3)', lineHeight: 1.75, margin: 0 }}>{p.body}</p>
+              {/* Sweeping left accent bar */}
+              <div style={{
+                position: 'absolute',
+                left: 0, top: 0, bottom: 0, width: 2,
+                background: 'var(--negative)',
+                transformOrigin: 'top',
+                transform: hovered === i ? 'scaleY(1)' : 'scaleY(0)',
+                transition: 'transform 380ms cubic-bezier(.4, 0, .2, 1)',
+              }} />
+
+              {/* Giant watermark number */}
+              <div style={{
+                position: 'absolute',
+                right: -4,
+                top: '50%',
+                transform: hovered === i
+                  ? 'translateY(-50%) scale(1.06)'
+                  : 'translateY(-50%) scale(1)',
+                fontSize: 148,
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 800,
+                letterSpacing: '-0.06em',
+                lineHeight: 1,
+                userSelect: 'none',
+                pointerEvents: 'none',
+                color: hovered === i
+                  ? 'color-mix(in srgb, var(--negative) 9%, transparent)'
+                  : 'color-mix(in srgb, var(--paper) 4%, transparent)',
+                transition: 'color 350ms, transform 380ms cubic-bezier(.2, .7, .2, 1)',
+              }}>
+                {p.n}
+              </div>
+
+              {/* Small mono index */}
+              <div style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 11,
+                letterSpacing: '0.12em',
+                color: hovered === i ? 'var(--negative)' : 'var(--paper-4)',
+                transition: 'color 220ms',
+                position: 'relative',
+              }}>
+                {p.n}
+              </div>
+
+              {/* Large italic title */}
+              <h3 className="display italic" style={{
+                fontSize: 'clamp(22px, 2.8vw, 38px)',
+                margin: 0,
+                letterSpacing: '-0.02em',
+                lineHeight: 1.1,
+                color: hovered === i ? 'var(--paper)' : 'var(--paper-2)',
+                transition: 'color 220ms',
+                position: 'relative',
+              }}>
+                {p.title}
+              </h3>
+
+              {/* Description */}
+              <p style={{
+                fontSize: 14,
+                color: hovered === i ? 'var(--paper-3)' : 'var(--paper-4)',
+                lineHeight: 1.8,
+                margin: 0,
+                transition: 'color 220ms',
+                position: 'relative',
+              }}>
+                {p.body}
+              </p>
+
+              {/* Arrow indicator */}
+              <div style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 18,
+                color: 'var(--negative)',
+                opacity: hovered === i ? 1 : 0,
+                transform: hovered === i ? 'translateX(0)' : 'translateX(-10px)',
+                transition: 'opacity 220ms, transform 260ms cubic-bezier(.2,.7,.2,1)',
+                position: 'relative',
+              }}>
+                →
+              </div>
             </div>
           ))}
+          <div style={{ borderTop: '1px solid var(--rule)' }} />
         </div>
       </div>
     </section>
@@ -594,9 +711,25 @@ function ProblemSection() {
 // ── Feature Section ────────────────────────────────────────────────────
 
 function FeatureSection() {
+  const [hovered, setHovered] = useState<number | null>(null);
+
+  const cardBase = (f: typeof FEATURES[0], i: number, extra?: React.CSSProperties): React.CSSProperties => ({
+    borderRadius: 16,
+    border: `1px solid ${f.accent}${hovered === i ? '50' : '1E'}`,
+    background: `color-mix(in srgb, ${f.accent} ${hovered === i ? '6%' : '3%'}, var(--ink-2))`,
+    position: 'relative',
+    overflow: 'hidden',
+    cursor: 'default',
+    transition: 'border-color 280ms, background 280ms, transform 300ms cubic-bezier(.2,.7,.2,1)',
+    transform: hovered === i ? 'translateY(-4px)' : 'none',
+    ...extra,
+  });
+
   return (
     <section style={{ padding: '120px 0', borderTop: '1px solid var(--rule)' }}>
       <div style={shell}>
+
+        {/* Header */}
         <div className="reveal" style={{ marginBottom: 72, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 24 }}>
           <div>
             <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 16 }}>
@@ -613,43 +746,158 @@ function FeatureSection() {
           </p>
         </div>
 
-        <div className="reveal-stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
-          {FEATURES.map((f, i) => (
-            <div key={i} className="stagger-item" style={{
-              padding: '40px', borderRadius: 14,
-              border: `1px solid ${f.accent}22`,
-              background: `color-mix(in srgb, ${f.accent} 3%, var(--ink-2))`,
-              position: 'relative', overflow: 'hidden',
-              transition: 'border-color 200ms, transform 220ms cubic-bezier(.2,.7,.2,1)',
-              cursor: 'default',
-            }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = f.accent + '55';
-                e.currentTarget.style.transform = 'translateY(-3px)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = f.accent + '22';
-                e.currentTarget.style.transform = '';
-              }}
-            >
-              {/* Subtle corner glow */}
-              <div style={{
-                position: 'absolute', top: -40, right: -40, width: 120, height: 120,
-                borderRadius: '50%',
-                background: `radial-gradient(circle, ${f.accent}15, transparent 70%)`,
-                pointerEvents: 'none',
-              }} />
+        {/* Asymmetric bento grid — 5-col base, row1: 3+2, row2: 2+3 */}
+        <div className="reveal-stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
 
-              <div style={{ fontSize: 28, marginBottom: 20 }}>{f.icon}</div>
-              <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', color: f.accent, textTransform: 'uppercase', marginBottom: 12 }}>
-                {f.num}
-              </div>
-              <h3 style={{ fontSize: 20, margin: '0 0 14px', color: 'var(--paper)', letterSpacing: '-0.01em', fontFamily: 'var(--font-display)', fontStyle: 'italic' }}>
-                {f.title}
-              </h3>
-              <p style={{ fontSize: 14, color: 'var(--paper-3)', lineHeight: 1.75, margin: 0 }}>{f.body}</p>
+          {/* ── Feature 01: Wide (3/5) — top left ── */}
+          <div
+            className="stagger-item"
+            style={cardBase(FEATURES[0], 0, { gridColumn: 'span 3', padding: '48px 44px', minHeight: 320 })}
+            onMouseEnter={() => setHovered(0)}
+            onMouseLeave={() => setHovered(null)}
+          >
+            {/* Large decorative icon — floats right */}
+            <div style={{
+              position: 'absolute', right: 36, top: '50%', transform: 'translateY(-50%)',
+              fontSize: 88, lineHeight: 1,
+              color: FEATURES[0].accent,
+              opacity: hovered === 0 ? 0.22 : 0.09,
+              transition: 'opacity 300ms',
+              pointerEvents: 'none', userSelect: 'none',
+            }}>
+              {FEATURES[0].icon}
             </div>
-          ))}
+            {/* Corner glow */}
+            <div style={{
+              position: 'absolute', top: -50, left: -50, width: 220, height: 220, borderRadius: '50%',
+              background: `radial-gradient(circle, ${FEATURES[0].accent}${hovered === 0 ? '1A' : '0A'}, transparent 70%)`,
+              transition: 'background 300ms', pointerEvents: 'none',
+            }} />
+            {/* Bottom accent strip */}
+            <div style={{
+              position: 'absolute', bottom: 0, left: 0, right: 0, height: 2,
+              background: `linear-gradient(to right, ${FEATURES[0].accent}90, transparent)`,
+            }} />
+
+            <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', color: FEATURES[0].accent, textTransform: 'uppercase', marginBottom: 'auto', paddingBottom: 40 }}>
+              {FEATURES[0].num}
+            </div>
+            <h3 className="display italic" style={{ fontSize: 'clamp(26px, 2.8vw, 38px)', margin: '0 0 14px', color: 'var(--paper)', letterSpacing: '-0.02em', lineHeight: 1.1, maxWidth: '65%' }}>
+              {FEATURES[0].title}
+            </h3>
+            <p style={{ fontSize: 14, color: 'var(--paper-3)', lineHeight: 1.8, margin: 0, maxWidth: '60%' }}>
+              {FEATURES[0].body}
+            </p>
+          </div>
+
+          {/* ── Feature 02: Narrow (2/5) — top right ── */}
+          <div
+            className="stagger-item"
+            style={cardBase(FEATURES[1], 1, { gridColumn: 'span 2', padding: '44px 36px', display: 'flex', flexDirection: 'column' })}
+            onMouseEnter={() => setHovered(1)}
+            onMouseLeave={() => setHovered(null)}
+          >
+            {/* Right edge accent */}
+            <div style={{
+              position: 'absolute', top: 0, right: 0, bottom: 0, width: 2,
+              background: `linear-gradient(to bottom, transparent, ${FEATURES[1].accent}90, transparent)`,
+            }} />
+            <div style={{
+              position: 'absolute', bottom: -40, right: -40, width: 180, height: 180, borderRadius: '50%',
+              background: `radial-gradient(circle, ${FEATURES[1].accent}${hovered === 1 ? '18' : '08'}, transparent 70%)`,
+              transition: 'background 300ms', pointerEvents: 'none',
+            }} />
+
+            <div style={{ fontSize: 36, marginBottom: 'auto', paddingBottom: 32, color: FEATURES[1].accent, opacity: hovered === 1 ? 0.9 : 0.6, transition: 'opacity 280ms' }}>
+              {FEATURES[1].icon}
+            </div>
+            <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', color: FEATURES[1].accent, textTransform: 'uppercase', marginBottom: 14 }}>
+              {FEATURES[1].num}
+            </div>
+            <h3 className="display italic" style={{ fontSize: 'clamp(20px, 2.2vw, 28px)', margin: '0 0 12px', color: 'var(--paper)', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
+              {FEATURES[1].title}
+            </h3>
+            <p style={{ fontSize: 14, color: 'var(--paper-3)', lineHeight: 1.75, margin: 0 }}>
+              {FEATURES[1].body}
+            </p>
+          </div>
+
+          {/* ── Feature 03: Narrow (2/5) — bottom left ── */}
+          <div
+            className="stagger-item"
+            style={cardBase(FEATURES[2], 2, { gridColumn: 'span 2', padding: '44px 36px', display: 'flex', flexDirection: 'column' })}
+            onMouseEnter={() => setHovered(2)}
+            onMouseLeave={() => setHovered(null)}
+          >
+            {/* Left edge accent */}
+            <div style={{
+              position: 'absolute', top: 0, left: 0, bottom: 0, width: 2,
+              background: `linear-gradient(to bottom, transparent, ${FEATURES[2].accent}90, transparent)`,
+            }} />
+            <div style={{
+              position: 'absolute', top: -40, left: -40, width: 180, height: 180, borderRadius: '50%',
+              background: `radial-gradient(circle, ${FEATURES[2].accent}${hovered === 2 ? '18' : '08'}, transparent 70%)`,
+              transition: 'background 300ms', pointerEvents: 'none',
+            }} />
+
+            <div style={{ fontSize: 36, marginBottom: 'auto', paddingBottom: 32, color: FEATURES[2].accent, opacity: hovered === 2 ? 0.9 : 0.6, transition: 'opacity 280ms' }}>
+              {FEATURES[2].icon}
+            </div>
+            <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', color: FEATURES[2].accent, textTransform: 'uppercase', marginBottom: 14 }}>
+              {FEATURES[2].num}
+            </div>
+            <h3 className="display italic" style={{ fontSize: 'clamp(20px, 2.2vw, 28px)', margin: '0 0 12px', color: 'var(--paper)', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
+              {FEATURES[2].title}
+            </h3>
+            <p style={{ fontSize: 14, color: 'var(--paper-3)', lineHeight: 1.75, margin: 0 }}>
+              {FEATURES[2].body}
+            </p>
+          </div>
+
+          {/* ── Feature 04: Wide (3/5) — bottom right ── */}
+          <div
+            className="stagger-item"
+            style={cardBase(FEATURES[3], 3, { gridColumn: 'span 3', padding: '48px 44px', minHeight: 300 })}
+            onMouseEnter={() => setHovered(3)}
+            onMouseLeave={() => setHovered(null)}
+          >
+            {/* Large decorative icon — floats left */}
+            <div style={{
+              position: 'absolute', left: 36, top: '50%', transform: 'translateY(-50%)',
+              fontSize: 88, lineHeight: 1,
+              color: FEATURES[3].accent,
+              opacity: hovered === 3 ? 0.22 : 0.09,
+              transition: 'opacity 300ms',
+              pointerEvents: 'none', userSelect: 'none',
+            }}>
+              {FEATURES[3].icon}
+            </div>
+            {/* Corner glow */}
+            <div style={{
+              position: 'absolute', bottom: -50, right: -50, width: 220, height: 220, borderRadius: '50%',
+              background: `radial-gradient(circle, ${FEATURES[3].accent}${hovered === 3 ? '1A' : '0A'}, transparent 70%)`,
+              transition: 'background 300ms', pointerEvents: 'none',
+            }} />
+            {/* Top accent strip */}
+            <div style={{
+              position: 'absolute', top: 0, left: 0, right: 0, height: 2,
+              background: `linear-gradient(to right, transparent, ${FEATURES[3].accent}90)`,
+            }} />
+
+            {/* Content pushed to the right side for the wide card */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', textAlign: 'right', height: '100%' }}>
+              <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', color: FEATURES[3].accent, textTransform: 'uppercase', marginBottom: 'auto', paddingBottom: 40 }}>
+                {FEATURES[3].num}
+              </div>
+              <h3 className="display italic" style={{ fontSize: 'clamp(26px, 2.8vw, 38px)', margin: '0 0 14px', color: 'var(--paper)', letterSpacing: '-0.02em', lineHeight: 1.1, maxWidth: '65%' }}>
+                {FEATURES[3].title}
+              </h3>
+              <p style={{ fontSize: 14, color: 'var(--paper-3)', lineHeight: 1.8, margin: 0, maxWidth: '60%' }}>
+                {FEATURES[3].body}
+              </p>
+            </div>
+          </div>
+
         </div>
       </div>
     </section>
@@ -1013,7 +1261,7 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div ref={rootRef} style={{ background: 'var(--ink)', minHeight: '100vh', color: 'var(--paper)' }}>
+    <div ref={rootRef} className="landing-page-root" style={{ background: 'var(--ink)', minHeight: '100vh', color: 'var(--paper)' }}>
       <Nav />
       <div className="landing-intro-stack">
         <Hero />

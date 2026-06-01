@@ -228,19 +228,6 @@ function Hero() {
 
       <div style={{ ...shell, position: 'relative', width: '100%', transform: 'translateY(-36px)' }}>
 
-        <div className="hero-eyebrow" style={{
-          display: 'inline-flex', alignItems: 'center', gap: 12, marginBottom: 28,
-          fontSize: 11, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase',
-          color: 'var(--accent)',
-        }}>
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', boxShadow: '0 0 18px var(--accent)' }} />
-          Equinox RWA
-          <span style={{ opacity: 0.4 }}>×</span>
-          Mantle Network
-          <span style={{ opacity: 0.4 }}>×</span>
-          ERC-8004
-        </div>
-
         <h1 className="hero-title landing-hero-title display italic" style={{
           fontSize: 'var(--landing-hero-title-size, 104px)',
           lineHeight: 0.98,
@@ -289,27 +276,6 @@ function Hero() {
           </a>
         </div>
 
-        <div className="hero-stats" style={{
-          display: 'flex',
-          gap: 30,
-          flexWrap: 'wrap',
-        }}>
-          {[
-            { v: '4', label: 'Asset Classes' },
-            { v: '3', label: 'Risk Profiles' },
-            { v: 'ERC-8004', label: 'Agent Standard' },
-            { v: 'Mantle', label: 'Target Network' },
-          ].map((s, i) => (
-            <div key={i} style={{
-              minWidth: 104,
-              paddingLeft: i > 0 ? 22 : 0,
-              borderLeft: i > 0 ? '1px solid color-mix(in srgb, var(--paper) 14%, transparent)' : undefined,
-            }}>
-              <div className="num" style={{ fontSize: 22, fontWeight: 600, color: 'var(--paper)', letterSpacing: '-0.02em', textShadow: '0 12px 30px rgba(0,0,0,0.7)' }}>{s.v}</div>
-              <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--paper-4)', marginTop: 4 }}>{s.label}</div>
-            </div>
-          ))}
-        </div>
       </div>
 
       <div style={{ position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>

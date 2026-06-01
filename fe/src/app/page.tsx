@@ -322,14 +322,16 @@ function Hero() {
 
 function LaunchAppPreview() {
   return (
-    <div className="landing-app-preview">
-      <Image
-        src="/image.png"
-        alt="Equinox launch app dashboard"
-        width={1844}
-        height={967}
-        priority
-      />
+    <div className="landing-app-preview-wrap">
+      <div className="landing-app-preview">
+        <Image
+          src="/image.png"
+          alt="Equinox launch app dashboard"
+          width={1844}
+          height={967}
+          priority
+        />
+      </div>
     </div>
   );
 }
@@ -1000,12 +1002,14 @@ export default function LandingPage() {
       });
 
       gsap.set('.landing-app-preview', {
-        xPercent: -50,
-        yPercent: -50,
         transformPerspective: 1200,
         transformOrigin: 'center bottom',
-        rotationX: 12,
-        scale: 0.94,
+        rotationY: 0,
+        rotationZ: 0,
+        skewX: 0,
+        skewY: 0,
+        rotationX: 6,
+        scale: 0.97,
       });
       gsap.to('.landing-app-preview', {
         scrollTrigger: {
@@ -1015,6 +1019,10 @@ export default function LandingPage() {
           scrub: 0.8,
         },
         rotationX: 0,
+        rotationY: 0,
+        rotationZ: 0,
+        skewX: 0,
+        skewY: 0,
         scale: 1,
         ease: 'none',
       });

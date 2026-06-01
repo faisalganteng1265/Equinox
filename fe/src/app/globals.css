@@ -405,20 +405,27 @@ svg { display: block; }
   isolation: isolate;
 }
 
-.landing-app-preview {
+.landing-app-preview-wrap {
   position: absolute;
   left: 50%;
   top: 100vh;
   z-index: 3;
   width: min(1320px, calc(100% - 48px));
   aspect-ratio: 1844 / 967;
+  transform: translate(-50%, -50%);
+  perspective: 1200px;
+}
+
+.landing-app-preview {
+  width: 100%;
+  height: 100%;
   border: 0;
   border-radius: 14px;
   overflow: hidden;
   background: var(--ink-2);
   box-shadow:
     0 34px 100px rgba(0,0,0,0.68);
-  transform: translate(-50%, -50%) perspective(1200px) rotateX(12deg) scale(0.94);
+  transform: rotateX(6deg) rotateY(0deg) rotateZ(0deg) skew(0deg) scale(0.97);
   transform-origin: center bottom;
   will-change: transform;
 }
@@ -450,7 +457,7 @@ svg { display: block; }
     --landing-hero-title-size: 76px;
   }
 
-  .landing-app-preview {
+  .landing-app-preview-wrap {
     width: calc(100% - 32px);
   }
 
@@ -492,7 +499,7 @@ svg { display: block; }
     --landing-hero-title-size: 58px;
   }
 
-  .landing-app-preview {
+  .landing-app-preview-wrap {
     top: 92vh;
   }
 
@@ -510,8 +517,11 @@ svg { display: block; }
     --landing-hero-title-size: 44px;
   }
 
-  .landing-app-preview {
+  .landing-app-preview-wrap {
     width: calc(100% - 20px);
+  }
+
+  .landing-app-preview {
     border-radius: 10px;
   }
 

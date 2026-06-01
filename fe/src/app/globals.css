@@ -403,6 +403,7 @@ svg { display: block; }
 .landing-intro-stack {
   position: relative;
   isolation: isolate;
+  z-index: 3;
 }
 
 .landing-app-preview-wrap {
@@ -419,15 +420,26 @@ svg { display: block; }
 .landing-app-preview {
   width: 100%;
   height: 100%;
-  border: 0;
+  border: 1px solid color-mix(in srgb, var(--paper) 24%, transparent);
   border-radius: 14px;
   overflow: hidden;
   background: var(--ink-2);
   box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.12),
+    inset 0 -1px 0 rgba(0,0,0,0.34),
     0 34px 100px rgba(0,0,0,0.68);
   transform: rotateX(6deg) rotateY(0deg) rotateZ(0deg) skew(0deg) scale(0.97);
   transform-origin: center bottom;
   will-change: transform;
+}
+
+.landing-app-preview::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  pointer-events: none;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.06);
 }
 
 .landing-app-preview img {
@@ -440,7 +452,20 @@ svg { display: block; }
 .landing-overlap-section {
   --landing-architecture-pad-top: 460px;
   position: relative;
+  z-index: 1;
   background: var(--ink);
+}
+
+.landing-section-2-3-stack {
+  position: relative;
+  z-index: 1;
+}
+
+.landing-problem-section {
+  position: relative;
+  z-index: 2;
+  background: var(--ink);
+  box-shadow: 0 -80px 120px var(--ink);
 }
 
 @media (max-width: 1100px) {

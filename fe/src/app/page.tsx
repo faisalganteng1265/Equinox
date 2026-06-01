@@ -242,39 +242,11 @@ function Hero() {
 
         <p className="hero-sub" style={{
           fontSize: 18, lineHeight: 1.75, color: 'var(--paper-2)',
-          maxWidth: 560, margin: '0 0 42px',
+          maxWidth: 560, margin: 0,
           textShadow: '0 12px 36px rgba(0,0,0,0.65)',
         }}>
           Institutional-grade DeFAI portfolio engine for Mantle. Autonomous yield management across RWA, DeFi, and CeFi with on-chain agent reputation and enforceable risk guardrails.
         </p>
-
-        <div className="hero-ctas" style={{ display: 'flex', gap: 14, marginBottom: 58, flexWrap: 'wrap' }}>
-          <Link href="/app" style={{
-            display: 'inline-flex', alignItems: 'center', gap: 10,
-            height: 52, padding: '0 28px', borderRadius: 10,
-            background: 'var(--accent)', color: 'var(--accent-fg)',
-            fontSize: 15, fontWeight: 600, textDecoration: 'none',
-            transition: 'filter 160ms, transform 160ms',
-            boxShadow: '0 0 40px color-mix(in srgb, var(--accent) 30%, transparent)',
-          }}
-            onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.08)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.filter = ''; e.currentTarget.style.transform = ''; }}
-          >
-            Launch App →
-          </Link>
-          <a href="#architecture" style={{
-            display: 'inline-flex', alignItems: 'center', gap: 10,
-            height: 52, padding: '0 28px', borderRadius: 10,
-            border: '1px solid var(--rule)', color: 'var(--paper-2)',
-            fontSize: 15, textDecoration: 'none',
-            transition: 'border-color 160ms, color 160ms',
-          }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--paper-4)'; e.currentTarget.style.color = 'var(--paper)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--rule)'; e.currentTarget.style.color = 'var(--paper-2)'; }}
-          >
-            View Architecture
-          </a>
-        </div>
 
       </div>
 
@@ -323,7 +295,7 @@ function CapitalTopologySection() {
   }
 
   return (
-    <section id="architecture" className="landing-overlap-section" style={{ padding: 'var(--landing-architecture-pad-top, 400px) 0 100px', borderTop: '1px solid var(--rule)' }}>
+    <section id="architecture" className="landing-overlap-section" style={{ padding: 'var(--landing-architecture-pad-top, 400px) 0 100px', borderTop: '1px solid var(--rule)', minHeight: '100vh' }}>
       <div style={shell}>
 
         {/* Section header */}
@@ -567,7 +539,7 @@ function CapitalTopologySection() {
 
 function ProblemSection() {
   return (
-    <section style={{ padding: '120px 0', borderTop: '1px solid var(--rule)' }}>
+    <section className="landing-problem-section" style={{ padding: '120px 0', borderTop: '1px solid var(--rule)' }}>
       <div style={shell}>
         <div className="reveal" style={{ marginBottom: 72 }}>
           <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--paper-4)', marginBottom: 16 }}>
@@ -993,6 +965,15 @@ export default function LandingPage() {
         ease: 'none',
       });
 
+      ScrollTrigger.create({
+        trigger: '.landing-overlap-section',
+        start: 'bottom bottom',
+        end: '+=720',
+        pin: true,
+        pinSpacing: false,
+        anticipatePin: 1,
+      });
+
       // Scroll-triggered single reveals
       gsap.utils.toArray<Element>('.reveal').forEach((el) => {
         gsap.from(el, {
@@ -1020,9 +1001,11 @@ export default function LandingPage() {
       <div className="landing-intro-stack">
         <Hero />
         <LaunchAppPreview />
-        <CapitalTopologySection />
       </div>
-      <ProblemSection />
+      <div className="landing-section-2-3-stack">
+        <CapitalTopologySection />
+        <ProblemSection />
+      </div>
       <FeatureSection />
       <HowItWorksSection />
       <RiskSection />

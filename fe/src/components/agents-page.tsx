@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+
 import { Icon } from './icons';
 import { SigilMark } from './v2-hero';
 import type { Agent, FeedEntry, RiskProfiles, Venue } from '@/lib/data';
@@ -232,6 +234,46 @@ function Kv({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
   );
 }
 
+function CollapsibleReasoning({
+  text,
+  maxLength = 180,
+}: {
+  text: string;
+  maxLength?: number;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const shouldCollapse = text.length > maxLength;
+
+  return (
+    <div style={{ color: 'var(--text-mute)', lineHeight: 1.5, paddingRight: 12 }}>
+      <span
+        style={{
+          ...(shouldCollapse && !expanded
+            ? {
+                display: '-webkit-box',
+                WebkitBoxOrient: 'vertical',
+                WebkitLineClamp: 2,
+                overflow: 'hidden',
+              }
+            : {}),
+        }}
+      >
+        {text}
+      </span>
+      {shouldCollapse ? (
+        <button
+          type="button"
+          className="btn btn-sm btn-ghost"
+          onClick={() => setExpanded((value) => !value)}
+          style={{ marginTop: 6, padding: 0, color: 'var(--accent)', display: 'block' }}
+        >
+          {expanded ? 'Show less' : 'Read more'}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 export function StrategyPage({
   venues,
   profile,
@@ -373,7 +415,7 @@ export function HistoryPage({ entries }: { entries: FeedEntry[] }) {
                     </span>
                     <div style={{ marginTop: 4, fontWeight: 500, color: 'var(--text)' }}>{e.title}</div>
                   </div>
-                  <div style={{ color: 'var(--text-mute)', lineHeight: 1.5, paddingRight: 12 }}>{e.body}</div>
+                  <CollapsibleReasoning text={e.body} />
                   <div style={{ color: 'var(--text-mute)' }}>{e.venue}</div>
                   <div className="mono" style={{ color: e.kind === 'guard' ? 'var(--negative)' : 'var(--text)' }}>{e.delta}</div>
                   <div className="mono dim">

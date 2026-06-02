@@ -534,7 +534,19 @@ export default function AppV2() {
                 {actionError ? (
                   <InlineStatus tone="error">{actionError}</InlineStatus>
                 ) : null}
-                <AgentMemoStream entries={deferredFeed} personality={personality} limit={5} />
+                <AgentMemoStream entries={deferredFeed} personality={personality} limit={2} />
+                {deferredFeed.length > 2 ? (
+                  <div style={{ display: 'flex', justifyContent: 'center', marginTop: 18 }}>
+                    <button
+                      className="btn btn-outline"
+                      onClick={() => startPageTransition(() => setPage('history'))}
+                      type="button"
+                      style={{ minWidth: 160 }}
+                    >
+                      Show more <Icon name="arrow-right" size={13} />
+                    </button>
+                  </div>
+                ) : null}
               </div>
 
               <div style={{ paddingTop: 70 }}>

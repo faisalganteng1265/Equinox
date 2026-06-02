@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Icon } from './icons';
 import type { Asset, FeedEntry, RiskProfiles } from '@/lib/data';
 
@@ -418,6 +418,51 @@ function memoLabel(kind: string): string {
     : 'REBALANCE';
 }
 
+function ReadMoreText({
+  text,
+  maxLength = 220,
+}: {
+  text: string;
+  maxLength?: number;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const shouldCollapse = text.length > maxLength;
+
+  return (
+    <div>
+      <p
+        style={{
+          margin: '8px 0 0',
+          fontSize: 13.5,
+          color: 'var(--paper-2)',
+          lineHeight: 1.65,
+          maxWidth: 620,
+          ...(shouldCollapse && !expanded
+            ? {
+                display: '-webkit-box',
+                WebkitBoxOrient: 'vertical',
+                WebkitLineClamp: 2,
+                overflow: 'hidden',
+              }
+            : {}),
+        }}
+      >
+        {text}
+      </p>
+      {shouldCollapse ? (
+        <button
+          type="button"
+          className="btn btn-sm btn-ghost"
+          onClick={() => setExpanded((value) => !value)}
+          style={{ marginTop: 6, padding: 0, color: 'var(--accent)' }}
+        >
+          {expanded ? 'Show less' : 'Read more'}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 export function AgentMemoStream({
   entries,
   personality = 'analyst',
@@ -449,7 +494,9 @@ export function AgentMemoStream({
               <span style={{ color: memoColor(e.kind), textTransform: 'uppercase' }}>{memoLabel(e.kind)}</span>{' '}
               <span style={{ color: 'var(--paper)' }}>{e.title}</span>
             </div>
-            <div className="dim" style={{ paddingLeft: 18 }}>-&gt; {e.body}</div>
+            <div className="dim" style={{ paddingLeft: 18 }}>
+              -&gt; {e.body.length > 180 ? `${e.body.slice(0, 180).trim()}...` : e.body}
+            </div>
           </div>
         ))}
       </div>
@@ -490,7 +537,7 @@ export function AgentMemoStream({
           >
             {e.title}
           </h4>
-          <p style={{ margin: '8px 0 0', fontSize: 13.5, color: 'var(--paper-2)', lineHeight: 1.65, maxWidth: 620 }}>{e.body}</p>
+          <ReadMoreText text={e.body} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10, fontSize: 11.5, flexWrap: 'wrap' }}>
             {e.delta !== 'no action' && (
               <span

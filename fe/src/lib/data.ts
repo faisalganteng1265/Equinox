@@ -44,6 +44,7 @@ export interface FeedEntry {
   tx: string | null;
   txUrl?: string;
   timestamp?: string;
+  occurredAt?: number;
   ago?: string;
 }
 

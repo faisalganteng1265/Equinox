@@ -182,6 +182,7 @@ export function buildDecisionFeed(agentSnapshot: AgentSnapshotResponse): FeedEnt
         minute: '2-digit',
         second: '2-digit',
       }),
+      occurredAt: timestamp.getTime(),
       ago: 'live',
     };
   });
@@ -211,6 +212,7 @@ export function buildBlockedTargets(contracts: ContractsResponse) {
 }
 
 export function buildPreviewFeed(preview: PreviewResponse, profile: RiskProfileName): FeedEntry {
+  const now = new Date();
   return {
     _key: Date.now(),
     kind: preview.preview.ok ? 'scan' : 'guard',
@@ -221,11 +223,12 @@ export function buildPreviewFeed(preview: PreviewResponse, profile: RiskProfileN
     venue: 'Backend preview',
     delta: preview.preview.ok ? 'preview ok' : 'blocked',
     tx: null,
-    timestamp: new Date().toLocaleTimeString('en-US', {
+    timestamp: now.toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
     }),
+    occurredAt: now.getTime(),
     ago: 'just now',
   };
 }

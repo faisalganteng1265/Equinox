@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useDeferredValue, useEffect, useMemo, useState, useTransition } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useAccount } from 'wagmi';
+import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
+import type { Address } from 'viem';
 
 import { AgentsPage, HistoryPage, StrategyPage } from '@/components/agents-page';
 import { Icon } from '@/components/icons';
@@ -13,15 +14,15 @@ import { CapitalTopology } from '@/components/v2-topology';
 import { WalletButton } from '@/components/wallet-button';
 import { TweaksPanel, TweakColor, TweakRadio, TweakSection, TweakSelect, useTweaks } from '@/components/tweaks-panel';
 import { equinoxApi } from '@/lib/equinox-api';
+import { vaultAbi } from '@/lib/abis';
+import { expectedChainId } from '@/lib/chains';
 import {
-  buildBlockedTargets,
   buildDecisionFeed,
-  buildPreviewFeed,
   buildPrimaryAgent,
-  buildProfileTargets,
   buildRiskProfilesFromPortfolio,
   buildUiAssets,
   buildUiVenues,
+  profileCodes,
   walletLabel,
 } from '@/lib/equinox-ui';
 import { RISK_PROFILES, buildSparkSeries, nowStamp, type FeedEntry, type RiskProfileName } from '@/lib/data';
@@ -35,6 +36,7 @@ const TWEAK_DEFAULTS = {
   personality: 'analyst' as string,
   profile: 'Balanced' as RiskProfileName,
 };
+const PROFILE_OPTIONS: RiskProfileName[] = ['Conservative', 'Balanced', 'Aggressive'];
 
 function softOf(hex: string) {
   return `color-mix(in srgb, ${hex} 18%, transparent)`;
@@ -96,14 +98,17 @@ export default function AppV2() {
   const [isPagePending, startPageTransition] = useTransition();
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
   const [modal, setModal] = useState<ModalKind>(null);
-  const [paused, setPaused] = useState(false);
-  const [actionBusy, setActionBusy] = useState<'preview' | 'execute' | 'reject' | null>(null);
+  const paused = false;
+  const [actionBusy, setActionBusy] = useState<'profile' | null>(null);
   const [creatingVault, setCreatingVault] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [shieldAttempt, setShieldAttempt] = useState<{ asset: string; weight: number }>({ asset: 'fBTC', weight: 0.38 });
+  const shieldAttempt = { asset: 'fBTC', weight: 0.38 };
   const [localFeed, setLocalFeed] = useState<FeedEntry[]>([]);
+  const lastSyncedRemoteProfile = useRef<RiskProfileName | null>(null);
+  const publicClient = usePublicClient({ chainId: expectedChainId });
+  const { data: walletClient } = useWalletClient();
 
   const accountQuery = useQuery({
     queryKey: ['equinox-account', address],
@@ -136,13 +141,6 @@ export default function AppV2() {
   });
 
   useEffect(() => {
-    if (isKnownMissingVault && !creatingVault) {
-      void createDemoPortfolio();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isKnownMissingVault]);
-
-  useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
@@ -153,10 +151,11 @@ export default function AppV2() {
 
   useEffect(() => {
     const remoteProfile = portfolioQuery.data?.vault.currentRiskProfile;
-    if (remoteProfile && remoteProfile !== profile && localFeed.length === 0) {
+    if (remoteProfile && lastSyncedRemoteProfile.current !== remoteProfile) {
+      lastSyncedRemoteProfile.current = remoteProfile;
       setTweak({ profile: remoteProfile });
     }
-  }, [localFeed.length, portfolioQuery.data?.vault.currentRiskProfile, profile, setTweak]);
+  }, [portfolioQuery.data?.vault.currentRiskProfile, setTweak]);
 
   const assets = useMemo(
     () => (portfolioQuery.data ? buildSparkSeries(buildUiAssets(portfolioQuery.data)) : []),
@@ -190,13 +189,21 @@ export default function AppV2() {
   );
 
   const onChainFeed = useMemo(() => (agentQuery.data ? buildDecisionFeed(agentQuery.data) : []), [agentQuery.data]);
-  const feed = useMemo(() => [...localFeed, ...onChainFeed].slice(0, 18), [localFeed, onChainFeed]);
+  const feed = useMemo(
+    () => [...localFeed, ...onChainFeed]
+      .sort((left, right) => (right.occurredAt ?? 0) - (left.occurredAt ?? 0))
+      .slice(0, 18),
+    [localFeed, onChainFeed],
+  );
   const deferredFeed = useDeferredValue(feed);
   const weightedApy = useMemo(
     () => assets.reduce((sum, asset) => sum + asset.weight * asset.apy, 0),
     [assets],
   );
   const navValue = Number(portfolioQuery.data?.vault.totalPortfolioValueFormatted || 0);
+  const selectedProfileCode = profileCodes[profile];
+  const remoteProfileCode = portfolioQuery.data?.vault.currentRiskProfileCode;
+  const hasPendingProfile = remoteProfileCode != null && selectedProfileCode !== remoteProfileCode;
 
   const memo = useMemo(() => {
     const latest = deferredFeed.find((entry) => entry.kind === 'rebalance') || deferredFeed[0];
@@ -214,11 +221,13 @@ export default function AppV2() {
   }, [agentQuery.data?.decisionCount, deferredFeed]);
 
   const addLocalFeed = useCallback((entry: FeedEntry) => {
+    const occurredAt = Date.now();
     setLocalFeed((current) => [
       {
         ...entry,
-        _key: Date.now() + current.length,
+        _key: occurredAt + current.length,
         timestamp: entry.timestamp || nowStamp(),
+        occurredAt: entry.occurredAt ?? occurredAt,
         ago: 'just now',
       },
       ...current,
@@ -264,114 +273,61 @@ export default function AppV2() {
     }
   }, [address, refreshLiveData]);
 
-  const triggerShield = useCallback(async () => {
-    if (!contractsQuery.data) {
+  useEffect(() => {
+    if (isKnownMissingVault && !creatingVault) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      void createDemoPortfolio();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isKnownMissingVault]);
+
+  const applyRiskProfile = useCallback(async () => {
+    if (!contractsQuery.data || !portfolioQuery.data || !walletClient || !publicClient || !address) {
+      setActionError('Connect your owner wallet before applying the risk profile.');
       return;
     }
 
-    setActionBusy('reject');
-    setActionError(null);
-
-    try {
-      const result = await equinoxApi.rejectRebalance({
-        targets: buildBlockedTargets(contractsQuery.data),
-        owner: address,
-        reasoning: {
-          source: 'frontend',
-          mode: 'guardrail-demo',
-          profile,
-        },
-        detailsUri: `equinox://frontend/reject/${Date.now()}`,
-      });
-
-      setShieldAttempt({
-        asset: result.preview.offendingAssetKey || 'fBTC',
-        weight: result.preview.attemptedWeightBps / 10_000,
-      });
-      addLocalFeed({
-        kind: 'guard',
-        title: 'Blocked decision recorded on-chain',
-        body: `Rejected decision logged with reasoning hash ${result.reasoningHash.slice(0, 10)}...`,
-        venue: 'Risk Guardrail',
-        delta: 'blocked',
-        tx: result.receipt.transactionHash,
-        txUrl: result.receipt.explorerUrl,
-      });
-      setModal('shield');
-      await refreshLiveData();
-    } catch (error) {
-      setActionError(error instanceof Error ? error.message : 'Failed to record rejected decision.');
-    } finally {
-      setActionBusy(null);
-    }
-  }, [addLocalFeed, address, contractsQuery.data, profile, refreshLiveData]);
-
-  const previewCurrentPlan = useCallback(async () => {
-    if (!contractsQuery.data) {
+    const vaultOwner = portfolioQuery.data.vault.owner.toLowerCase();
+    if (address.toLowerCase() !== vaultOwner) {
+      setActionError(`Only the vault owner ${walletLabel(portfolioQuery.data.vault.owner)} can change the risk profile.`);
       return;
     }
 
-    setActionBusy('preview');
-    setActionError(null);
-
-    try {
-      const preview = await equinoxApi.previewRebalance({
-        targets: buildProfileTargets(contractsQuery.data, liveProfiles[profile].target),
-        owner: address,
-      });
-
-      addLocalFeed(buildPreviewFeed(preview, profile));
-      if (!preview.preview.ok) {
-        setShieldAttempt({
-          asset: preview.preview.offendingAssetKey || 'fBTC',
-          weight: preview.preview.attemptedWeightBps / 10_000,
-        });
-        setModal('shield');
-      }
-    } catch (error) {
-      setActionError(error instanceof Error ? error.message : 'Preview request failed.');
-    } finally {
-      setActionBusy(null);
-    }
-  }, [addLocalFeed, address, contractsQuery.data, liveProfiles, profile]);
-
-  const executeCurrentPlan = useCallback(async () => {
-    if (!contractsQuery.data) {
+    if (chainId && chainId !== expectedChainId) {
+      setActionError('Switch to Mantle Sepolia before applying the risk profile.');
       return;
     }
 
-    setActionBusy('execute');
+    setActionBusy('profile');
     setActionError(null);
 
     try {
-      const result = await equinoxApi.executeRebalance({
-        targets: buildProfileTargets(contractsQuery.data, liveProfiles[profile].target),
-        owner: address,
-        reasoning: {
-          source: 'frontend',
-          mode: 'execute-profile',
-          profile,
-          wallet: address,
-        },
-        detailsUri: `equinox://frontend/execute/${Date.now()}`,
+      const hash = await walletClient.writeContract({
+        address: contractsQuery.data.core.vault as Address,
+        abi: vaultAbi,
+        functionName: 'setRiskProfile',
+        args: [profileCodes[profile]],
+        chain: publicClient.chain,
+        account: address,
       });
 
+      await publicClient.waitForTransactionReceipt({ hash });
       addLocalFeed({
         kind: 'rebalance',
-        title: `${profile} targets executed`,
-        body: `Authorized backend agent executed a rebalance and wrote tx ${result.receipt.transactionHash.slice(0, 10)}... on Mantle.`,
-        venue: 'Backend agent',
-        delta: `${result.preview.totalWeightBps / 100}% target`,
-        tx: result.receipt.transactionHash,
-        txUrl: result.receipt.explorerUrl,
+        title: `${profile} profile applied`,
+        body: `Vault risk profile updated on-chain. Autonomous strategy cycles will now use ${profile} guardrails.`,
+        venue: 'Owner wallet',
+        delta: profile,
+        tx: hash,
+        txUrl: `${contractsQuery.data.chain.explorerUrl.replace(/\/$/, '')}/tx/${hash}`,
       });
       await refreshLiveData();
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : 'Execute request failed.');
+      setActionError(error instanceof Error ? error.message : 'Failed to apply risk profile.');
     } finally {
       setActionBusy(null);
     }
-  }, [addLocalFeed, address, contractsQuery.data, liveProfiles, profile, refreshLiveData]);
+  }, [addLocalFeed, address, chainId, contractsQuery.data, portfolioQuery.data, profile, publicClient, refreshLiveData, walletClient]);
 
   const bootError = accountQuery.error || contractsQuery.error || (isKnownMissingVault ? null : portfolioQuery.error || agentQuery.error);
   if (bootError) {
@@ -477,17 +433,82 @@ export default function AppV2() {
                     {assets.length} assets | weighted APY {weightedApy.toFixed(2)}%
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button className="btn btn-outline" onClick={() => canOpenVaultModal && setModal('withdraw')} type="button">
-                    <Icon name="minus" size={13} /> Withdraw
-                  </button>
-                  <button className="btn btn-primary" onClick={() => canOpenVaultModal && setModal('deposit')} type="button">
-                    <Icon name="plus" size={13} /> Deposit
-                  </button>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    flex: '1 1 360px',
+                    flexWrap: 'wrap',
+                    padding: '0 18px',
+                  }}
+                >
+                  <span className="eyebrow" style={{ color: 'var(--paper-3)' }}>Strategy</span>
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 3,
+                      padding: 3,
+                      border: '1px solid var(--rule)',
+                      borderRadius: 'var(--r-md)',
+                      background: 'var(--ink-2)',
+                    }}
+                  >
+                    {PROFILE_OPTIONS.map((option) => {
+                      const active = profile === option;
+                      return (
+                        <button
+                          key={option}
+                          className="btn btn-sm"
+                          onClick={() => setTweak({ profile: option })}
+                          type="button"
+                          style={{
+                            minWidth: 96,
+                            borderColor: active ? 'var(--accent)' : 'transparent',
+                            background: active ? 'var(--accent-soft)' : 'transparent',
+                            color: active ? 'var(--accent)' : 'var(--paper-2)',
+                          }}
+                        >
+                          {option}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {hasPendingProfile ? (
+                    <button className="btn btn-sm btn-primary" onClick={() => void applyRiskProfile()} type="button" disabled={actionBusy !== null}>
+                      {actionBusy === 'profile' ? 'Applying...' : 'Apply'}
+                    </button>
+                  ) : null}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn btn-outline" onClick={() => canOpenVaultModal && setModal('withdraw')} type="button">
+                      <Icon name="minus" size={13} /> Withdraw
+                    </button>
+                    <button className="btn btn-primary" onClick={() => canOpenVaultModal && setModal('deposit')} type="button">
+                      <Icon name="plus" size={13} /> Deposit
+                    </button>
+                  </div>
+                  {portfolioQuery.isFetching && !refreshing ? (
+                    <div
+                      className="eyebrow"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        color: 'var(--paper-3)',
+                        paddingLeft: 10,
+                      }}
+                    >
+                      <Icon name="swap" size={11} color="var(--info)" />
+                      Refreshing
+                    </div>
+                  ) : null}
                 </div>
               </div>
               {refreshError ? <InlineStatus tone="error">{refreshError}</InlineStatus> : null}
-              {portfolioQuery.isFetching && !refreshing ? <InlineStatus tone="info">Refreshing vault balances and adapter snapshots...</InlineStatus> : null}
               {assets.length > 0 ? (
                 <div className="asset-grid">
                   {assets.map((asset) => (
@@ -508,26 +529,9 @@ export default function AppV2() {
                       Streaming | {personality === 'terminal' ? 'telemetry' : 'analyst memo'} | ERC-8004 logged
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                    <button className="btn btn-sm btn-outline" onClick={() => setPaused((value) => !value)} type="button">
-                      <Icon name={paused ? 'play' : 'pause'} size={12} /> {paused ? 'Resume' : 'Pause'}
-                    </button>
-                    <button className="btn btn-sm btn-outline" onClick={() => void previewCurrentPlan()} type="button" disabled={actionBusy !== null}>
-                      {actionBusy === 'preview' ? 'Previewing...' : 'Preview plan'}
-                    </button>
-                    <button className="btn btn-sm btn-outline" onClick={() => void executeCurrentPlan()} type="button" disabled={actionBusy !== null}>
-                      {actionBusy === 'execute' ? 'Executing...' : 'Execute plan'}
-                    </button>
-                    <button className="btn btn-sm btn-outline" onClick={() => void triggerShield()} type="button" disabled={actionBusy !== null}>
-                      <Icon name="shield" size={12} color="var(--negative)" /> {actionBusy === 'reject' ? 'Recording...' : 'Record blocked'}
-                    </button>
-                  </div>
                 </div>
                 {actionError ? (
                   <InlineStatus tone="error">{actionError}</InlineStatus>
-                ) : null}
-                {agentQuery.isFetching && !actionBusy ? (
-                  <InlineStatus tone="info">Syncing latest agent decision log...</InlineStatus>
                 ) : null}
                 <AgentMemoStream entries={deferredFeed} personality={personality} limit={5} />
               </div>
@@ -539,6 +543,16 @@ export default function AppV2() {
                   profiles={liveProfiles}
                   assets={assets}
                 />
+                {hasPendingProfile ? (
+                  <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                    <span className="eyebrow" style={{ color: 'var(--paper-3)' }}>
+                      Vault is {portfolioQuery.data?.vault.currentRiskProfile}; selected {profile}
+                    </span>
+                    <button className="btn btn-sm btn-primary" onClick={() => void applyRiskProfile()} type="button" disabled={actionBusy !== null}>
+                      {actionBusy === 'profile' ? 'Applying...' : 'Apply profile'}
+                    </button>
+                  </div>
+                ) : null}
               </div>
             </section>
           </>

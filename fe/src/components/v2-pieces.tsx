@@ -167,6 +167,7 @@ export function RiskDial({
   const order = ['Conservative', 'Balanced', 'Aggressive'];
   const activeIdx = order.indexOf(profile);
   const current = profiles[profile as keyof typeof profiles];
+  const activeFillHeight = activeIdx <= 0 ? '0px' : activeIdx === 1 ? 'calc(50% - 7px)' : 'calc(100% - 13px)';
 
   return (
     <div
@@ -225,7 +226,7 @@ export function RiskDial({
               left: 27,
               top: 7,
               width: 6,
-              height: `${(activeIdx + 1) * 33}%`,
+              height: activeFillHeight,
               background: 'linear-gradient(180deg, var(--accent), var(--accent-deep))',
               borderRadius: 3,
               transition: 'height 360ms cubic-bezier(.2,.7,.2,1)',
@@ -233,7 +234,7 @@ export function RiskDial({
             }}
           />
           {order.map((p, i) => {
-            const top = i * 50;
+            const top = i === 0 ? '6px' : i === 1 ? '50%' : 'calc(100% - 6px)';
             const active = profile === p;
             return (
               <button
@@ -241,13 +242,14 @@ export function RiskDial({
                 onClick={() => setProfile(p)}
                 style={{
                   position: 'absolute',
-                  top: `${top}%`,
+                  top,
                   left: 0,
                   width: 62,
                   height: 22,
+                  transform: 'translateY(-50%)',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 6,
+                  justifyContent: 'center',
                   background: 'transparent',
                   border: 0,
                   cursor: 'pointer',

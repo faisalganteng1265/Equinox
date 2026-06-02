@@ -97,6 +97,33 @@ forge build
 forge test
 ```
 
+## ⚙️ Deployed Smart Contracts
+- Mock USDY: https://sepolia.mantlescan.xyz/address/0x9e7af1a46613f04450012e822bc8b674c33aa5d8#code
+
+- Mock mETH: https://sepolia.mantlescan.xyz/address/0xb4967c57550152026578bbbc998c47ca3fe9b69b#code
+
+- Mock fBTC: https://sepolia.mantlescan.xyz/address/0xa65074fdc9ad5c3889d9f75eb87f9bf6d21bda09#code
+
+- Mock MI4: https://sepolia.mantlescan.xyz/address/0x8ec27fcf7f6396d3c35902c5d144d40e66729f85#code
+
+- MockAssetExchange: https://sepolia.mantlescan.xyz/address/0x17c4ce203272c62a8d029210b1ed182127aa94fd#code
+
+- StrategyRegistry: https://sepolia.mantlescan.xyz/address/0x57a447fc04934b45d47bc408cca92c27d77838e3#code
+
+- MantleAgentRegistry8004: https://sepolia.mantlescan.xyz/address/0x48c51d7adb14b79bc3e01b5ecefbe63695c99834#code
+
+- MockIdleAdapter: https://sepolia.mantlescan.xyz/address/0xf0a77f62e5bd9905be20e9016d316786903223e3#code
+
+- MockDeFiLendingAdapter mETH: https://sepolia.mantlescan.xyz/address/0x8f699c98556e30dc17fb2bdbeef76d25767145c2#code
+
+- MockCeFiEarnAdapter fBTC: https://sepolia.mantlescan.xyz/address/0x748914efb51e8f24b8177f4c1e6d82ec68e67e3c#code
+
+- MockDeFiLendingAdapter MI4: https://sepolia.mantlescan.xyz/address/0x0b39e9865b027c288872ca71a2a567e95c6fcf58#code
+
+- MantleVaultOrchestrator: https://sepolia.mantlescan.xyz/address/0x5cff4689e4c828ebbfd2e15e1a8629137219eaf1#code
+
+- VaultFactory: https://sepolia.mantlescan.xyz/address/0x49cf06766902ad1022927fac6f98b2b793d29531#code
+
 ---
 
 ## 🛠️ Technology Stack & Web Standards

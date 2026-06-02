@@ -205,20 +205,21 @@ export default function AppV2() {
   const remoteProfileCode = portfolioQuery.data?.vault.currentRiskProfileCode;
   const hasPendingProfile = remoteProfileCode != null && selectedProfileCode !== remoteProfileCode;
 
-  const memo = useMemo(() => {
-    const latest = deferredFeed.find((entry) => entry.kind === 'rebalance') || deferredFeed[0];
+  const overview = useMemo(() => {
+    const decisionCount = agentQuery.data?.stats.totalDecisions || 0;
+    const successfulDecisions = agentQuery.data?.stats.successfulDecisions || 0;
+    const blockedCount = agentQuery.data?.stats.blockedDecisions || 0;
+    const totalProfitPct = Number(agentQuery.data?.stats.cumulativePerformanceBps || 0) / 100;
 
     return {
-      no: String(agentQuery.data?.decisionCount || 0),
       date: new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }),
-      kind: latest?.kind === 'guard' ? 'Guardrail' : 'Rebalance',
-      delta: latest?.delta || '0.0%',
-      from: 'USDY',
-      to: 'mETH',
-      body: latest?.body || 'Waiting for the latest agent decision from Mantle.',
-      tx: latest?.tx || '0x0',
+      totalProfitPct,
+      weightedApyPct: weightedApy,
+      successRatePct: decisionCount > 0 ? (successfulDecisions / decisionCount) * 100 : 100,
+      decisionCount,
+      blockedCount,
     };
-  }, [agentQuery.data?.decisionCount, deferredFeed]);
+  }, [agentQuery.data?.stats.blockedDecisions, agentQuery.data?.stats.cumulativePerformanceBps, agentQuery.data?.stats.successfulDecisions, agentQuery.data?.stats.totalDecisions, weightedApy]);
 
   const addLocalFeed = useCallback((entry: FeedEntry) => {
     const occurredAt = Date.now();
@@ -406,12 +407,12 @@ export default function AppV2() {
         {page === 'portfolio' ? (
           <>
             <MemoHero
-              memo={memo}
               navValue={navValue}
               change24={Math.max(0.12, weightedApy / 3)}
               ytd={Math.max(1.2, weightedApy * 1.9)}
               agent={primaryAgent}
               profile={profile}
+              overview={overview}
             />
 
             <section className="section">

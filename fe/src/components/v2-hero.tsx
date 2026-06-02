@@ -74,49 +74,87 @@ export function Mark() {
 }
 
 export function MemoHero({
-  memo,
   navValue,
   change24,
   ytd,
   agent,
   profile,
+  overview,
 }: {
-  memo: { no: string; date: string; kind: string; delta: string; from: string; to: string; body: string; tx: string };
   navValue: number;
   change24: number;
   ytd: number;
   agent: Agent;
   profile: string;
+  overview: {
+    date: string;
+    totalProfitPct: number;
+    weightedApyPct: number;
+    successRatePct: number;
+    decisionCount: number;
+    blockedCount: number;
+  };
 }) {
+  const profitTone = overview.totalProfitPct >= 0 ? 'var(--positive)' : 'var(--negative)';
+  const statItems = [
+    { label: 'Current strategy', value: profile, tone: 'var(--accent)' },
+    { label: 'Current agent', value: agent.name, tone: 'var(--paper)' },
+    { label: 'Total profit', value: `${overview.totalProfitPct >= 0 ? '+' : ''}${overview.totalProfitPct.toFixed(2)}%`, tone: profitTone },
+    { label: 'Weighted APY', value: `${overview.weightedApyPct.toFixed(2)}%`, tone: 'var(--positive)' },
+    { label: 'Decisions', value: overview.decisionCount.toLocaleString(), tone: 'var(--paper)' },
+    { label: 'Success rate', value: `${overview.successRatePct.toFixed(0)}%`, tone: 'var(--accent)' },
+  ];
+
   return (
     <section className="hero">
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-          <span className="eyebrow">Memo #{memo.no.padStart(3, '0')}</span>
+          <span className="eyebrow">Portfolio overview</span>
           <span style={{ width: 32, height: 1, background: 'var(--rule)' }} />
-          <span className="eyebrow" style={{ color: 'var(--paper-2)' }}>{memo.date}</span>
+          <span className="eyebrow" style={{ color: 'var(--paper-2)' }}>{overview.date}</span>
           <span style={{ width: 32, height: 1, background: 'var(--rule)' }} />
-          <span className="eyebrow" style={{ color: 'var(--accent)' }}>{memo.kind}</span>
+          <span className="eyebrow" style={{ color: 'var(--accent)' }}>{profile}</span>
         </div>
 
         <h1>
-          Rebalanced <em>{memo.delta}</em> {memo.from}{' '}
-          <span style={{ color: 'var(--paper-3)' }}>-&gt;</span> {memo.to} ahead of{' '}
-          <em>Mantle staking incentive cycle.</em>
+          Autonomous RWA portfolio <em>overview</em> for{' '}
+          <em>{profile.toLowerCase()}</em> strategy.
         </h1>
 
-        <p
+        <div
           style={{
-            fontSize: 16,
-            color: 'var(--paper-2)',
-            lineHeight: 1.65,
-            maxWidth: 580,
-            marginTop: 24,
-            textWrap: 'pretty' as React.CSSProperties['textWrap'],
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+            gap: 12,
+            maxWidth: 720,
+            marginTop: 28,
           }}
         >
-          {memo.body}
-        </p>
+          {statItems.map((item) => (
+            <div
+              key={item.label}
+              style={{
+                borderTop: '1px solid var(--rule)',
+                paddingTop: 12,
+                minHeight: 72,
+              }}
+            >
+              <div className="eyebrow" style={{ color: 'var(--paper-3)' }}>{item.label}</div>
+              <div
+                className="display italic"
+                style={{
+                  marginTop: 8,
+                  fontSize: item.value.length > 14 ? 24 : 30,
+                  lineHeight: 1,
+                  color: item.tone,
+                  overflowWrap: 'anywhere',
+                }}
+              >
+                {item.value}
+              </div>
+            </div>
+          ))}
+        </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginTop: 24, color: 'var(--paper-3)', fontSize: 13, flexWrap: 'wrap' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -125,7 +163,7 @@ export function MemoHero({
           </span>
           <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--paper-4)' }} />
           <span className="mono" style={{ color: 'var(--paper-3)' }}>
-            ref {memo.tx}
+            {overview.blockedCount} guardrail blocks
           </span>
           <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--paper-4)' }} />
           <span className="mono dim">Mantle Sepolia</span>

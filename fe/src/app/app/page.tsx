@@ -416,6 +416,54 @@ export default function AppV2() {
             />
 
             <section className="section">
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 10,
+                  flexWrap: 'wrap',
+                  marginBottom: 22,
+                }}
+              >
+                <span className="eyebrow" style={{ color: 'var(--paper-3)' }}>Strategy</span>
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    padding: 4,
+                    border: '1px solid var(--rule)',
+                    borderRadius: 'var(--r-md)',
+                    background: 'var(--ink-2)',
+                  }}
+                >
+                  {PROFILE_OPTIONS.map((option) => {
+                    const active = profile === option;
+                      return (
+                        <button
+                          key={option}
+                          className="btn"
+                          onClick={() => setTweak({ profile: option })}
+                          type="button"
+                          style={{
+                            minWidth: 124,
+                            borderColor: active ? 'var(--accent)' : 'transparent',
+                            background: active ? 'var(--accent-soft)' : 'transparent',
+                            color: active ? 'var(--accent)' : 'var(--paper-2)',
+                        }}
+                      >
+                        {option}
+                      </button>
+                    );
+                  })}
+                </div>
+                {hasPendingProfile ? (
+                  <button className="btn btn-primary" onClick={() => void applyRiskProfile()} type="button" disabled={actionBusy !== null}>
+                    {actionBusy === 'profile' ? 'Applying...' : 'Apply'}
+                  </button>
+                ) : null}
+              </div>
               <CapitalTopology
                 assets={assets}
                 venues={venues}
@@ -433,55 +481,6 @@ export default function AppV2() {
                   <div className="eyebrow" style={{ marginTop: 8 }}>
                     {assets.length} assets | weighted APY {weightedApy.toFixed(2)}%
                   </div>
-                </div>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                    flex: '1 1 360px',
-                    flexWrap: 'wrap',
-                    padding: '0 18px',
-                  }}
-                >
-                  <span className="eyebrow" style={{ color: 'var(--paper-3)' }}>Strategy</span>
-                  <div
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 3,
-                      padding: 3,
-                      border: '1px solid var(--rule)',
-                      borderRadius: 'var(--r-md)',
-                      background: 'var(--ink-2)',
-                    }}
-                  >
-                    {PROFILE_OPTIONS.map((option) => {
-                      const active = profile === option;
-                      return (
-                        <button
-                          key={option}
-                          className="btn btn-sm"
-                          onClick={() => setTweak({ profile: option })}
-                          type="button"
-                          style={{
-                            minWidth: 96,
-                            borderColor: active ? 'var(--accent)' : 'transparent',
-                            background: active ? 'var(--accent-soft)' : 'transparent',
-                            color: active ? 'var(--accent)' : 'var(--paper-2)',
-                          }}
-                        >
-                          {option}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {hasPendingProfile ? (
-                    <button className="btn btn-sm btn-primary" onClick={() => void applyRiskProfile()} type="button" disabled={actionBusy !== null}>
-                      {actionBusy === 'profile' ? 'Applying...' : 'Apply'}
-                    </button>
-                  ) : null}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
                   <div style={{ display: 'flex', gap: 8 }}>

@@ -21,9 +21,41 @@ const instrumentSerif = Instrument_Serif({
   variable: '--font-instrument-serif',
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: 'Equinox RWA | Capital Topology',
   description: 'AI-native RWA portfolio management on Mantle. ERC-8004 agent identity.',
+  icons: {
+    icon: [
+      { url: '/logo.png', type: 'image/png' },
+      { url: '/logo.png', rel: 'shortcut icon', type: 'image/png' },
+    ],
+    apple: [{ url: '/logo.png', type: 'image/png' }],
+  },
+  openGraph: {
+    title: 'Equinox RWA | Capital Topology',
+    description:
+      'AI-native RWA portfolio management on Mantle with ERC-8004 agent identity and risk-guarded execution.',
+    type: 'website',
+    siteName: 'Equinox RWA',
+    images: [
+      {
+        url: '/og-banner.png',
+        width: 1200,
+        height: 630,
+        alt: 'Equinox RWA Open Graph Banner',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Equinox RWA | Capital Topology',
+    description:
+      'AI-native RWA portfolio management on Mantle with ERC-8004 agent identity and risk-guarded execution.',
+    images: ['/og-banner.png'],
+  },
 };
 
 export default function RootLayout({

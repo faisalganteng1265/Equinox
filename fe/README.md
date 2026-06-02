@@ -1,124 +1,131 @@
-# Equinox Frontend
+# 💻 Equinox Frontend (Web3 Portfolio Dashboard & Agent Command Center)
 
-Frontend Next.js untuk Equinox, dashboard AI-native RWA portfolio management di atas Mantle. FE ini sekarang membaca state live dari backend Equinox, memakai RainbowKit untuk connect wallet, dan memakai Mantle SDK untuk estimasi gas Mantle L2 pada flow deposit/withdraw.
+[![Framework: Next.js 16](https://img.shields.io/badge/Framework-Next.js%2016-black.svg)](https://nextjs.org/)
+[![React: 19](https://img.shields.io/badge/Library-React%2019-blue.svg)](https://react.dev/)
+[![Styling: TailwindCSS 4](https://img.shields.io/badge/Styling-TailwindCSS%204-cyan.svg)](https://tailwindcss.com/)
+[![Web3: RainbowKit / Wagmi](https://img.shields.io/badge/Web3-RainbowKit%20%2F%20Wagmi-purple.svg)](https://www.rainbowkit.com/)
 
-## Tech Stack
+This folder contains the **Equinox Frontend Web Portal**—the user dashboard layer of the Equinox RWA platform. It connects to users' wallets via RainbowKit, provides asset deposit and withdrawal controls directly on Mantle Sepolia, visualizes NAV breakdowns and portfolio strategies, and displays the real-time decision reasoning logged by AI agents.
 
-- Next.js 16 dengan App Router
-- React 19
-- TypeScript
-- RainbowKit + wagmi + viem
-- `@mantleio/sdk`
-- Tailwind CSS 4
-- ESLint 9 dengan konfigurasi Next.js
+---
 
-## Getting Started
+## 🎯 Application Hubs & UX Views
 
-Install dependencies dari root workspace:
+The frontend portal provides a premium, high-contrast dark theme (powered by Tailwind 4 CSS tokens) divided into several functional views:
 
-```bash
-pnpm install
+### 1. 📊 Portfolio Command Dashboard (`/`)
+*   **Purpose**: Central dashboard where users manage deposits, withdrawals, and monitor rebalancing.
+*   **Key Features**:
+    *   **Live NAV Card**: Renders real-time net asset values dynamically parsed from backend API services.
+    *   **Donut & Allocation Charts**: Visualizes exposures across USDY, mETH, fBTC, and MI4 using custom chart wrappers.
+    *   **Capital Topology Diagram**: Renders connection maps linking assets to their active yield-accruing adapters.
+    *   **Quick Deposit/Withdraw Modals**: Integrated Web3 forms enabling direct interaction with the Mantle L2 vaults.
+
+### 2. 🤖 Agent Registry View (`/agents`)
+*   **Purpose**: Details the autonomous agent registered to the vault under standard ERC-8004.
+*   **Key Features**:
+    *   Shows the Agent NFT ID, assigned wallet address, historical performance metrics, win-rate, and on-chain reputation score.
+
+### 3. 📝 Decision & Strategy Feeds (`/history`, `/strategy`)
+*   **Purpose**: Offers clear visibility into adapter setups and AI agent decision streams.
+*   **Key Features**:
+    *   Lists approved adapters (MockIdle, MockDeFiLending, MockCeFiEarn) and their active APYs, risk ratings, and liquidity statuses.
+    *   Presents a stream of rebalance plans marked as `Executed` or `Blocked` (when risk caps are violated).
+
+### 4. 🛠️ Floating Demo Panel (Tweaks Bar)
+*   **Purpose**: Simulates state variations for evaluation and hackathon presentations.
+*   **Key Features**:
+    *   Toggle themes, change accent colors, alter agent persona tone, and switch risk profiles (Conservative, Balanced, Aggressive).
+
+---
+
+## ⚙️ Environment Variables Setup
+
+Before running the frontend application, copy the example environment configuration:
+
+1. Create a `.env` file from the template:
+   ```bash
+   cp .env.example .env
+   ```
+2. Configure the required parameters:
+
+```env
+# 1. WalletConnect Project ID for RainbowKit Web3 pairing
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID="your_walletconnect_project_id"
+
+# 2. Origin URL of the Equinox Backend Orchestrator API
+EQUINOX_API_ORIGIN="http://localhost:4000"
+
+# 3. Optional write API key if the backend requires authentication
+EQUINOX_WRITE_API_KEY="your_backend_write_api_key"
 ```
 
-Siapkan env frontend:
+---
 
+## ⚡ Development & Scripts
+
+To start the frontend application locally:
+
+### 1. From the Monorepo Root (Recommended)
+You can run workspace commands directly from the project root:
 ```bash
-copy fe\.env.example fe\.env.local
+# Starts both Express backend and Next.js dev server concurrently
+pnpm dev
 ```
-
-Isi minimal:
-
-- `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`
-- `EQUINOX_API_ORIGIN`
-- `EQUINOX_WRITE_API_KEY` jika backend write endpoints dikunci
-
-Pastikan backend Equinox juga sudah berjalan di `http://localhost:4000` atau sesuaikan `EQUINOX_API_ORIGIN`.
-
-Jalankan frontend dari root:
-
+To run only the frontend dev script:
 ```bash
 pnpm dev:fe
 ```
 
-Atau dari package frontend langsung:
-
+### 2. From the `fe/` Directory Directly
+If executing scripts directly within this workspace:
 ```bash
-pnpm --filter @equinox/fe dev
+cd fe
+
+# Install workspace dependencies
+pnpm install
+
+# Start Next.js development server
+pnpm run dev
 ```
+The client portal will be available at [http://localhost:3000](http://localhost:3000).
 
-Buka `http://localhost:3000` di browser.
-
-## Required Flow
-
-Untuk testing end-to-end:
-
-1. Jalankan `be` terlebih dahulu.
-2. Jalankan `fe`.
-3. Connect owner wallet di Mantle Sepolia via RainbowKit.
-4. Gunakan modal `Deposit` atau `Withdraw` untuk transaksi langsung ke vault.
-5. Gunakan tombol `Preview plan`, `Execute plan`, dan `Record blocked` untuk menguji flow agent melalui backend.
-
-## Scripts
-
+### 3. Build & Lint Verification
+Ensure the build and lints pass before opening pull requests:
 ```bash
-pnpm --filter @equinox/fe dev
-pnpm --filter @equinox/fe build
-pnpm --filter @equinox/fe start
-pnpm --filter @equinox/fe lint
+pnpm run build
+pnpm run lint
 ```
 
-- `dev`: menjalankan Next.js development server.
-- `build`: membuat production build.
-- `start`: menjalankan production server setelah build.
-- `lint`: menjalankan ESLint untuk frontend.
+---
 
-## Project Structure
+## 📂 Project Structure
 
-```text
-src/app/
-  globals.css       Global theme, layout primitives, component utility classes
-  providers.tsx     RainbowKit, wagmi, and React Query providers
-  layout.tsx        Root metadata, fonts, and HTML shell
-  page.tsx          Main Equinox dashboard app shell
-  api/equinox       Local proxy route to backend Equinox API
-  api/mantle/gas    Mantle SDK gas estimation endpoint
+*   `src/app/` - App Router page shell and routing.
+    *   `globals.css` - Global theme variables, utility classes, and custom styling overrides.
+    *   `providers.tsx` - Root Web3 context (RainbowKit, Wagmi, React Query).
+    *   `page.tsx` - Primary landing and dashboard application layout.
+    *   `api/` - Next.js endpoints proxying requests to the Express backend and fetching Mantle SDK gas metrics.
+*   `src/components/` - Interactive UI components.
+    *   `charts.tsx` - Allocation charts, donut graphs, and sparklines.
+    *   `modals.tsx` - Action overlays for deposit, withdraw, and risk alerts.
+    *   `tweaks-panel.tsx` - Dynamic demo configuration switches.
+    *   `v2-topology.tsx` - Visual representation of asset-to-venue topology.
+*   `src/lib/` - Libraries and helpers.
+    *   `abis.ts` - Smart contract ABIs for client-side transaction compilation.
+    *   `equinox-api.ts` - Local API client querying backend endpoints.
 
-src/components/
-  agents-page.tsx   Agent registry, strategy, and history views
-  charts.tsx        Donut, area, sparkline, and allocation charts
-  icons.tsx         Local icon renderer used by dashboard controls
-  modals.tsx        Live vault deposit/withdraw and risk shield modals
-  tweaks-panel.tsx  Floating demo controls for theme/accent/profile
-  v2-hero.tsx       Top navigation and memo hero
-  v2-pieces.tsx     Portfolio cards, risk dial, ticker, and feed stream
-  v2-topology.tsx   Capital topology visualization
-  wallet-button.tsx RainbowKit custom topbar button
+---
 
-src/lib/
-  abis.ts           Minimal ABI surface for user wallet actions
-  chains.ts         Mantle Sepolia chain config
-  data.ts           UI types and risk profile presets
-  equinox-api.ts    Browser client for FE proxy routes
-  equinox-types.ts  Backend response contracts for FE
-  equinox-ui.ts     Mapping live backend payloads into dashboard UI shapes
-  wagmi.ts          RainbowKit and wagmi client config
-```
+## 🛠️ Technology Stack & Web Standards
 
-## Current UX
+*   **Framework**: Next.js `16.x` using the App Router.
+*   **Web3 Engine**: Wagmi `2.x`, RainbowKit `2.x`, and Viem `2.x` for secure EVM account connectivity.
+*   **Gas Estimator**: `@mantleio/sdk` `1.x` for Mantle L2 gas overhead assessments.
+*   **Styling**: TailwindCSS `4.x` with CSS design system tokens.
+*   **Animations**: GSAP for premium page loading transitions and hover feedback.
 
-- Portfolio page with live NAV, live asset exposures, Mantle wallet actions, agent controls, and decision ticker.
-- Agent page for ERC-8004-style identity and live agent metadata.
-- Strategy page for adapters returned by the backend.
-- History page backed by live decision data plus local write actions.
-- Floating tweaks panel for dark/light theme, accent color, agent tone, and risk profile.
+---
 
-## Validation
-
-Run these before opening a PR or pushing larger changes:
-
-```bash
-pnpm --filter @equinox/fe lint
-pnpm --filter @equinox/fe build
-```
-
-Both commands should pass before deployment.
+## 📄 License
+Licensed under the **MIT License**.

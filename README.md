@@ -1,51 +1,95 @@
-# Product Design Specification: Equinox RWA
+# 🌌 Equinox RWA (The Institutional-Grade DeFAI Portfolio Engine for Mantle Ecosystem)
 
-## Monorepo Setup
+![Equinox Banner](./fe/public/og-banner.png)
 
-Repo ini sekarang memakai `pnpm workspace` untuk layer aplikasi JavaScript:
+[![Framework: Next.js 16](https://img.shields.io/badge/Framework-Next.js%2016-black.svg)](https://nextjs.org/)
+[![Backend: Express](https://img.shields.io/badge/Backend-Express--Node.js-green.svg)](https://expressjs.com/)
+[![Contracts: Solidity 0.8.23](https://img.shields.io/badge/Contracts-Solidity%200.8.23-blue.svg)](https://soliditylang.org/)
+[![Network: Mantle Sepolia](https://img.shields.io/badge/Network-Mantle%20Sepolia-purple.svg)](https://www.mantle.xyz/)
+[![AI reasoning: OpenRouter](https://img.shields.io/badge/AI--Reasoning-OpenRouter-orange.svg)](https://openrouter.ai/)
 
-- `fe` -> Next.js frontend
-- `be` -> Express backend
-- `sc` -> tetap terpisah, tidak masuk workspace `pnpm`, dan tetap dijalankan dengan tool Foundry
+Equinox RWA is an institutional-grade yield management infrastructure powered by AI on the Mantle Network. It is equipped with verifiable on-chain reputation (based on the ERC-8004 standard) to automate portfolio rebalancing dynamically across liquid staking (mETH), US-bond-based RWA (USDY), Bitcoin exposure (fBTC), and index assets (MI4). It bridges Web3 liquidity with CeFi (Bybit Earn) through automated backend triggers under rigid, user-configured risk guardrails.
 
-### Quick Start
+This root folder coordinates the monorepo via `pnpm workspaces` containing the frontend (`fe`) and backend (`be`), while keeping the smart contracts (`sc`) as a Foundry project.
 
-Install dependency frontend dan backend dari root:
+---
+
+## 🎯 Monorepo & System Architecture
+
+The Equinox system separates its off-chain AI reasoning, backend optimization, and on-chain risk enforcement into three core layers:
+
+### 1. 📊 Frontend App (`fe/`)
+*   **Purpose**: Web3 user portal and asset command center.
+*   **Key Features**:
+    *   Live portfolio dashboard displaying Net Asset Value (NAV), current asset allocations (mETH, USDY, fBTC, MI4) in donut charts, and capital topology connections.
+    *   Integrated deposit/withdrawal modals that execute transactions directly on Mantle Sepolia.
+    *   Agent view displaying active AI agent's ERC-8004 NFT metadata, win-rate, total logged decisions, and current reputation score.
+    *   Floating tweaks panel for risk profile adjustment (Conservative, Balanced, Aggressive), visual theme overrides, and agent tone.
+
+### 2. ⚙️ Backend Orchestrator (`be/`)
+*   **Purpose**: The operational broker and reasoning coordinator.
+*   **Key Features**:
+    *   Uses Viem to listen to Mantle blockchain events and signs transactions using an operator wallet.
+    *   Fetches off-chain CeFi yields via Bybit API and compares them with Mantle L2 DeFi rates.
+    *   Hooks into OpenRouter to generate natural language explanations and confidence scores for rebalancing actions.
+    *   Provides secure JSON REST endpoints to serve the frontend portal.
+
+### 3. 📜 Smart Contracts (`sc/`)
+*   **Purpose**: The trustless on-chain custody and risk guardrail enforcer.
+*   **Key Features**:
+    *   **MantleVaultOrchestrator**: Core vault custodying assets, enforcing risk profile allocation boundaries, and performing safe swaps.
+    *   **MantleAgentRegistry8004**: Standard ERC-8004 identity registry that mints agent ID NFTs and registers decision reasoning hashes on-chain.
+    *   **VaultFactory**: Deploys dedicated vaults and registers agent identities per user (`1 user = 1 vault`, `1 vault = 1 agent ID`).
+    *   **StrategyRegistry & Adapters**: Maintains approved strategy venues (MockIdle, MockDeFiLending, MockCeFiEarn) to prevent arbitrary capital routing.
+
+---
+
+## ⚙️ Environment Variables Setup
+
+Before running the application, you must configure the environment variables in each package:
+
+1. **Frontend (`fe/`)**: Copy `fe/.env.example` to `fe/.env`
+2. **Backend (`be/`)**: Copy `be/.env.example` to `be/.env`
+3. **Smart Contracts (`sc/`)**: Copy `sc/.env.example` to `sc/.env`
+
+Please refer to the respective package READMEs for individual variable configurations and details.
+
+---
+
+## ⚡ Development & Scripts
+
+Ensure you have `pnpm` and `Foundry` installed. Follow these steps to build and run the monorepo:
+
+### 1. Root Monorepo Commands
+To manage dependencies and run both application layers (FE & BE) concurrently:
 
 ```bash
+# Install dependencies for frontend and backend from the root
 pnpm install
-```
 
-Jalankan frontend dan backend bersamaan dari root:
-
-```bash
+# Start both frontend and backend development servers concurrently
 pnpm dev
-```
 
-Jalankan salah satu package saja:
-
-```bash
-pnpm dev:fe
-pnpm dev:be
-```
-
-Atau gunakan filter langsung:
-
-```bash
-pnpm --filter @equinox/fe dev
-pnpm --filter @equinox/be dev
-```
-
-Build dari root:
-
-```bash
+# Build both frontend and backend packages
 pnpm build
+
+# Lint both frontend and backend packages
 pnpm lint
 ```
 
-### Smart Contract Workspace
+### 2. Running Individual Packages
+You can execute commands on specific workspaces from the root folder:
 
-Folder `sc` tidak dikelola oleh `pnpm workspace`. Untuk smart contract, tetap gunakan command Foundry dari folder `sc`:
+```bash
+# Run only frontend
+pnpm dev:fe
+
+# Run only backend
+pnpm dev:be
+```
+
+### 3. Smart Contracts (Foundry)
+Smart contracts are isolated from `pnpm workspaces`. Run tests and build compiled artifacts directly from the `sc/` folder:
 
 ```bash
 cd sc
@@ -53,171 +97,17 @@ forge build
 forge test
 ```
 
-**Target Network:** Mantle Network (Testnet)
+---
 
-## 1. Identitas Produk
+## 🛠️ Technology Stack & Web Standards
 
-**Nama Produk:** Equinox RWA
+*   **Monorepo Workspace**: `pnpm` workspaces.
+*   **Frontend Web3 Client**: Next.js 16 (App Router), React 19, Tailwind CSS 4, RainbowKit 2.x, Wagmi 2.x, Viem 2.x, and `@mantleio/sdk`.
+*   **Backend Orchestrator**: Node.js, Express.js, Viem 2.x, and OpenRouter API (Gemini models).
+*   **Smart Contracts Framework**: Foundry (Solidity 0.8.23) using OpenZeppelin v5 libraries.
+*   **Target Network**: Mantle Network (Sepolia Testnet).
 
-**Tagline:** The Institutional-Grade DeFAI Portfolio Engine for Mantle Ecosystem
+---
 
-**One-Liner (Elevator Pitch):**
-
-"Equinox RWA adalah infrastruktur yield management bertenaga AI di jaringan Mantle yang dilengkapi dengan reputasi terverifikasi secara on-chain (berbasis standar ERC-8004). Sistem ini mengotomatisasi penyeimbangan portofolio lintas kelas aset secara dinamis (mETH, USDY, fBTC, MI4), menjembatani likuiditas lintas dunia (DeFi Mantle <-> Bybit CeFi Earn) via Bybit API, serta mengamankan modal pengguna menggunakan batas parameter risiko (Risk-Adjusted Guardrails) yang dieksekusi secara transparan dan terekam penuh di blockchain."
-
-## 2. Masalah & Solusi
-
-| Masalah Utama | Solusi Equinox RWA |
-| --- | --- |
-| Ketergantungan Aset Tunggal & Efisiensi Rendah<br><br>Kompetitor DeFAI (seperti Giza ARMA) hanya mengoptimalkan satu kelas aset (stablecoin) di kolam lending terbatas, sehingga kehilangan momentum yield dari volatilitas aset utama. | Cross-Asset-Class Optimization Engine:<br><br>Mengoptimalkan alokasi secara simultan lintas aset native terkuat Mantle: liquid staking (mETH), RWA berbasis obligasi AS (USDY), serta eksposur Bitcoin dan indeks (fBTC, MI4). |
-| Krisis Kepercayaan Terhadap AI (Black Box)<br><br>Pengguna dipaksa mempercayai keputusan AI off-chain secara buta tanpa adanya rekam jejak performa yang transparan dan tidak dapat dimanipulasi. | ERC-8004 Verifiable Agent Reputation:<br><br>Setiap AI Agent dicetak sebagai NFT identitas unik. Seluruh riwayat hasil yield, tingkat penarikan (drawdown), dan keputusan rebalancing dicatat on-chain untuk membangun skor reputasi yang terverifikasi. |
-| Kekakuan Likuiditas On-Chain<br><br>Protokol yield aggregator tradisional terjebak di ekosistem on-chain, kehilangan peluang keuntungan yang lebih tinggi saat platform CeFi menawarkan suku bunga promosi/institusional yang lebih baik. | Cross-World Bridge via Bybit API:<br><br>Konektivitas backend cerdas yang secara otomatis memindahkan aset antara protokol DeFi Mantle (Aave V3, CIAN) dan Bybit CeFi Earn Products berdasarkan kalkulasi selisih keuntungan (rate differential) yang gas-aware. |
-| Strategi Agresif yang Buta Risiko (Chasing APY)<br><br>Bot otomatis sering memindahkan modal ke kolam yield tinggi yang tidak likuid atau rentan diretas demi mengejar angka APY tinggi. | Enforced Risk-Adjusted Strategy Profiles:<br><br>AI mengeksekusi penyeimbangan dana di dalam batas ketat profil risiko yang dipilih user (Conservative, Balanced, Aggressive). Kontrak pintar akan menolak instruksi jika alokasi melanggar parameter profil. |
-
-## 3. Arsitektur Sistem & Detail Teknis (Modular Structure)
-
-Sistem ini memisahkan logika matematika off-chain yang kompleks dari penegakan keamanan on-chain melalui tiga lapisan utama:
-
-```text
-+-----------------------------------------------------------------+
-|                    1. SMART CONTRACT LAYER                      |
-|  - MantleVaultOrchestrator.sol      - MantleAgentRegistry8004.sol|
-|  - Integrasi: Aave V3, CIAN Vaults                               |
-+-----------------------------------------------------------------+
-                               ^
-                               | (Transaksi Web3 Aman)
-                               v
-+-----------------------------------------------------------------+
-|                   2. BACKEND ORCHESTRATOR                       |
-|  - Express.js (Node.js) Engine      - Bybit API Connector        |
-|  - RPC Event Listener & Execution Trigger                        |
-+-----------------------------------------------------------------+
-                               ^
-                               | (Sinyal Optimasi & Log Keputusan)
-                               v
-+-----------------------------------------------------------------+
-|                3. STRATEGY & REASONING LAYER                    |
-|  - Backend Strategy Engine         - Risk Matrix Controller      |
-|  - OpenRouter Reasoning Provider                                 |
-+-----------------------------------------------------------------+
-```
-
-### Current vs Target Architecture
-
-Kondisi repo saat ini dan arah produk Equinox berikutnya perlu dibedakan dengan jelas:
-
-- `Current MVP`
-  - `1 deployed vault`
-  - `1 vault owner`
-  - `1 authorized backend agent`
-  - flow utama masih `single-user managed vault demo`
-
-- `Target architecture`
-  - `VaultFactory`
-  - `1 user = 1 vault`
-  - `1 vault = 1 personal agent identity`
-  - `shared backend strategy engine`
-  - `shared OpenRouter reasoning layer`
-
-Artinya, di arsitektur target nanti setiap user memiliki vault dan agent identity miliknya sendiri, tetapi perhitungan strategi dan reasoning tetap dapat dijalankan oleh backend yang sama secara `per vault`, tanpa mencampur state antar user.
-
-### A. Layer Smart Contract (Solidity - Mantle Network)
-
-Dibangun menggunakan framework Foundry untuk menjamin keamanan tinggi dan eksekusi pengujian lokal yang komprehensif.
-
-**MantleVaultOrchestrator.sol (Brankas Utama Portofolio):**
-
-Menyimpan aset pengguna secara terpusat (mETH, USDY, fBTC, MI4).
-
-Variabel Kunci: `address public owner`, `address public authorizedAgent`, `uint8 public currentRiskProfile`.
-
-Fungsi `rebalancePortfolio(address[] targets, uint256[] weights)`: Fungsi penyeimbangan aset yang hanya dapat dipicu oleh backend agen yang sah. Sebelum dana ditransfer ke sub-protokol (seperti Aave atau CIAN), fungsi ini melakukan validasi silang ke modul profil risiko untuk memastikan transaksi aman.
-
-**MantleAgentRegistry8004.sol (Mesin Identitas & Reputasi):**
-
-Mengimplementasikan standar ERC-8004 yang didukung penuh oleh Mantle untuk memberikan identitas resmi pada AI Agent.
-
-State: `mapping(uint256 => AgentStats) public agentRegistry` (menyimpan metrik win-rate, total transaksi, historis APY, dan skor reputasi 0-100).
-
-Fungsi `logDecision(uint256 agentId, string memory reasoningHash, bytes memory performanceData)`: Mencatat hash argumen keputusan AI secara permanen di blockchain (on-chain decision logging).
-
-**VaultFactory.sol (Target Direction):**
-
-Target evolusi berikutnya adalah factory yang memungkinkan setiap user membuat vault Equinox miliknya sendiri. Factory akan:
-
-- deploy vault baru untuk caller
-- bind `owner -> vault`
-- register atau bind `agentId`
-- menunjuk backend operator sebagai `authorizedAgent`
-
-Dengan model ini, narasi produk menjadi lebih kuat:
-
-- setiap user punya vault sendiri
-- setiap user punya AI agent identity pribadi
-- backend tetap memproses keputusan secara terpusat tetapi `per vault`
-
-### B. Layer Backend & Reasoning Engine (Express.js & OpenRouter)
-
-Kombinasi performa asinkronus Node.js untuk operasi Web3, strategy logic deterministic di backend, dan provider LLM untuk reasoning yang dapat diaudit.
-
-**mantle-yield-orchestrator (Backend Express.js):**
-
-Bertindak sebagai jembatan operasional utama menggunakan library Viem untuk interaksi dengan blockchain Mantle.
-
-Bybit API Connector: Mengelola modul koneksi terenkripsi ke API institusional Bybit untuk mengecek suku bunga CeFi Earn secara real-time dan mengeksekusi perintah pemindahan dana jika parameter terpenuhi.
-
-Menyediakan REST API internal untuk memperbarui data ke live dashboard antarmuka pengguna.
-
-**strategy-and-reasoning layer (Backend + OpenRouter):**
-
-Backend tetap menghitung target strategi secara deterministic berdasarkan data pasar, batas profil risiko, dan guardrail execution.
-
-Fungsi `evaluate_yield_curves()`: Logika backend secara konstan memetakan kurva yield dari semua instrumen (on-chain & off-chain), menghitung biaya gas riil di Mantle, dan membentuk target rebalancing yang efisien.
-
-Fungsi `generate_reasoning()`: Provider LLM seperti `OpenRouter` mengonversi context strategi dan data risiko menjadi teks narasi natural yang mudah dipahami manusia untuk ditampilkan pada feed dApp.
-
-## 4. Alur Kerja (Skenario Demo Hackathon)
-
-Skenario pembuktian aplikasi untuk Demo Day dirancang guna memperlihatkan keunggulan sistem dalam 4 babak dramatis:
-
-### 1. Tahap Setup & Pendelegasian Parameter (User Interface)
-
-**Aksi:** Pengguna masuk ke dApp Equinox, menghubungkan dompet, membuat vault Equinox miliknya, mendepositkan modal berupa USDY, dan memilih profil risiko "Balanced".
-
-**On-Chain:** Sistem mencetak NFT ERC-8004 sebagai identitas agen baru yang ditugaskan khusus untuk mengelola brankas user. Vault baru dibind ke owner tersebut, dan kontrak mengunci batas alokasi profil Balanced secara permanen di blockchain.
-
-### 2. Skenario Eksekusi Otonom (Normal Operation)
-
-**Aksi:** Suku bunga dasar obligasi AS pada token USDY turun, sementara insentif pool mETH di ekosistem DeFi Mantle melonjak.
-
-**Eksekusi:** Backend strategy engine mendeteksi anomali ini, menghitung efisiensi gas, dan mengeksekusi rebalancing. Layer reasoning kemudian menjelaskan keputusan tersebut ke pengguna. Dana dipindahkan secara otonom dari USDY ke mETH.
-
-**Hasil:** Keputusan dicatat via ERC-8004, dan dashboard memperlihatkan "Agent Reasoning Feed" secara real-time. Juri dapat melihat transparansi logika AI secara langsung.
-
-### 3. Jembatan Lintas Dunia (CeFi <-> DeFi Pivot)
-
-**Aksi:** Terjadi kejenuhan yield masif di seluruh ekosistem on-chain Mantle (DeFi APY merosot hingga 3.2%).
-
-**Eksekusi:** Melalui Bybit API, agen mendeteksi bahwa Bybit CeFi Earn menawarkan suku bunga mETH sebesar 4.8%. Agen memicu penarikan likuiditas dari on-chain, memindahkannya ke sistem kustodian Bybit melalui API yang aman.
-
-**Hasil:** Integrasi Bybit API sukses terdemonstrasikan, membuktikan kapabilitas cross-world yield arbitrage yang tidak dimiliki kompetitor manapun.
-
-### 4. Uji Penahanan Batas Risiko (The Shield Activates / Climax Demo)
-
-**Aksi:** Terjadi simulasi serangan Prompt Injection pada backend AI, atau kondisi pasar ekstrim yang membuat model AI mengalami halusinasi dan mencoba mengalokasikan 90% dana ke aset berisiko tinggi (fBTC leverage) demi mengejar APY kilat.
-
-**Eksekusi:** Instruksi transaksi dikirim ke MantleVaultOrchestrator.sol. Namun, karena user mengunci profil di mode "Balanced", interseptor smart contract mendeteksi bahwa batas alokasi fBTC melanggar batas maksimum aman profil tersebut.
-
-**Hasil:** Transaksi otomatis di-revert di level blockchain. Dana pengguna tetap aman, dan dasbor memicu peringatan merah: "Transaction Blocked: Risk Profile Constraints Violated." Keamanan arsitektur terbukti 100% aman di hadapan juri.
-
-## 5. Tech Stack & Partner Integrations
-
-| Komponen | Teknologi yang Digunakan | Peran dalam Proyek |
-| --- | --- | --- |
-| Smart Contracts & Testing | Foundry, Solidity | Kompilasi super cepat untuk logika penguncian aset, pengujian fungsionalitas brankas utama, dan manajemen parameter profil risiko. |
-| Agent Standards | ERC-8004 (Mantle Tech Stack) | Menyediakan kerangka NFT Identitas, Reputasi, dan Validasi resmi untuk mencatat historical performance agen secara terverifikasi. |
-| Web3 Client Engine | Viem, TypeScript | Library berkinerja tinggi untuk mendengarkan RPC event Mantle, merakit transaksi, dan berinteraksi secara aman dari backend ke smart contract. |
-| CeFi Integrator | Bybit API | Menghubungkan ekosistem backend ke bursa Bybit untuk membaca data suku bunga Earn dan memindahkan likuiditas secara hibrida. |
-| Backend Orchestrator | Express.js & Node.js | Pusat kendali operasional, bertindak sebagai agregator data, menangani otentikasi API, dan menyajikan data real-time ke dasbor aplikasi. |
-| Strategy & Reasoning Layer | Express.js, TypeScript, OpenRouter | Backend menghitung target strategi secara deterministic, lalu provider reasoning menghasilkan penjelasan natural-language, confidence summary, dan konteks keputusan agen. |
-| Target Network | Mantle Network | Menyediakan finalitas transaksi instan, biaya gas ultra-murah, akses langsung ke likuiditas mETH/USDY, serta pemenuhan syarat utama track AI x RWA. |
+## 📄 License
+Licensed under the **MIT License**.

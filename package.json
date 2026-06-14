@@ -2,6 +2,10 @@
   "name": "equinox",
   "private": true,
   "packageManager": "pnpm@11.1.1",
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=11"
+  },
   "scripts": {
     "dev": "pnpm -r --parallel --filter @equinox/fe --filter @equinox/be run dev",
     "dev:fe": "pnpm --filter @equinox/fe dev",
